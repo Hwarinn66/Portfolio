@@ -1,0 +1,17 @@
+{
+  "name": "efriza-portfolio",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": { "dev": "next dev --hostname 0.0.0.0", "build": "next build", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.0.0",
+    "@fontsource-variable/space-grotesk": "^5.0.0",
+    "gsap": "3.15.0",
+    "lucide-react": "^0.577.0",
+    "next": "16.3.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": { "@tailwindcss/postcss": "4.3.3", "@types/node": "^22.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0", "tailwindcss": "4.3.3", "typescript": "^5.9.0" },
+  "engines": { "node": ">=22.0.0" }
+}

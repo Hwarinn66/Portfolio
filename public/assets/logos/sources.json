@@ -1,0 +1,84 @@
+{
+  "provider": "Devicon",
+  "license": "MIT",
+  "logos": [
+    {
+      "name": "python",
+      "filename": "python.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/python/python-original.svg",
+      "sha256": "71493b4a732f0532b3a03a7a95da3ee11a65766367c8303b901ffbe7bf91a3a2"
+    },
+    {
+      "name": "tensorflow",
+      "filename": "tensorflow.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/tensorflow/tensorflow-original.svg",
+      "sha256": "44f2bb3db305bc30f50ec0578f7a4a840c82c3544d36e436ab7d8afee3937b71"
+    },
+    {
+      "name": "opencv",
+      "filename": "opencv.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/opencv/opencv-original.svg",
+      "sha256": "a7adfae29bdb714195ea9b31b4f6f3ff7cf21fb448ab244f6110987280bd7b7e"
+    },
+    {
+      "name": "scikitlearn",
+      "filename": "scikitlearn.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/scikitlearn/scikitlearn-original.svg",
+      "sha256": "d60362a1c43c5571876ebaab923f7783f6f7d3bd64bd78cca765a451dc5e92e2"
+    },
+    {
+      "name": "fastapi",
+      "filename": "fastapi.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/fastapi/fastapi-original.svg",
+      "sha256": "7ef41f6a363b00ff595e6d0b933c025c92cbfae29dc1df24b2f6eb8b476ee486"
+    },
+    {
+      "name": "flask",
+      "filename": "flask.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/flask/flask-original.svg",
+      "sha256": "7a27bb8cb739a080c285066c16c75828bc2eca4d76fa06eff76d556e0274a9d7"
+    },
+    {
+      "name": "flutter",
+      "filename": "flutter.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/flutter/flutter-original.svg",
+      "sha256": "c188249043aecad16b31eaa230474643270a8d8200b897af54a97949cb88e4ae"
+    },
+    {
+      "name": "php",
+      "filename": "php.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/php/php-original.svg",
+      "sha256": "f22619a19c99a123e4678d71826f65f223721a739631dff46de39827c9ee0633"
+    },
+    {
+      "name": "javascript",
+      "filename": "javascript.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/javascript/javascript-original.svg",
+      "sha256": "0656ff65fc8eeacda5c78d7f9ffe91ec1eb919db64f56e0b7dcd460af4bbd36c"
+    },
+    {
+      "name": "git",
+      "filename": "git.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/git/git-original.svg",
+      "sha256": "717a57ea97bf7e86de721dab3e68afac66332a10676d5c9abce4ae6a5a9c9983"
+    },
+    {
+      "name": "nextjs",
+      "filename": "nextjs.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/nextjs/nextjs-original.svg",
+      "sha256": "d9435c4ede7133b376c0173a80226bb3856729366707cd96e9a66e39448d0288"
+    },
+    {
+      "name": "tailwindcss",
+      "filename": "tailwindcss.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/tailwindcss/tailwindcss-original.svg",
+      "sha256": "f8cec54589553807eb603bcaf4e056aa090196211698b056542e3cc62a2f3448"
+    },
+    {
+      "name": "arduino",
+      "filename": "arduino.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/arduino/arduino-original.svg",
+      "sha256": "e1748d89b57310e6272df4de73a49c71b597126a5104c1e22cf5231c90507e94"
+    }
+  ]
+}
