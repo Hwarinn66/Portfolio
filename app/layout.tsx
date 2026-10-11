@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import '@fontsource-variable/bricolage-grotesque/standard.css';
 import '@fontsource-variable/instrument-sans';
 import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/archivo/standard.css';
 import './globals.css';
 
 export const metadata: Metadata = {

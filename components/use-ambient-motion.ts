@@ -109,7 +109,7 @@ export function useAmbientMotion(paused: boolean) {
 
     const loop = (time: number) => {
       raf = requestAnimationFrame(loop);
-      if (document.hidden) return;
+      if (document.hidden || document.documentElement.classList.contains('trailer-open')) return;
       if (coarse && time - lastInput > 2400) {
         tx = Math.sin(time / 2700) * 0.55;
         ty = Math.cos(time / 3500) * 0.4;

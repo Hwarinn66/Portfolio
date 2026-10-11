@@ -195,7 +195,7 @@ export default function BackgroundField({ paused }: { paused: boolean }) {
 
     const loop = (time: number) => {
       raf = requestAnimationFrame(loop);
-      if (!document.hidden) draw(time, true);
+      if (!document.hidden && !document.documentElement.classList.contains('trailer-open')) draw(time, true);
     };
     raf = requestAnimationFrame(loop);
     window.addEventListener('pointermove', onPointerMove, { passive: true });

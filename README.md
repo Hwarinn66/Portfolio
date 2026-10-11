@@ -35,7 +35,17 @@ Light pastel glassmorphism on a "milk glass" field (`#f2f3fa`), with deep indigo
 | Mini terminal | Type commands, ↑/↓ history, Tab completion | Quick-command chips type themselves, then run |
 | Navigation | Floating glass pill with active-section indicator and scroll progress | Bottom glass dock with active section |
 
-Terminal commands: `bantuan`, `tentang`, `proyek`, `buka <nomor|nama>`, `filter <ml|cv|iot|web|semua>`, `skill`, `pendidikan`, `pengalaman`, `kontak`, `cv`, `github`, `salin-email`, `gerak`, `tanggal`, `echo`, `bersihkan`, plus one hidden `sudo` command.
+Terminal commands: `bantuan`, `tentang`, `proyek`, `buka <nomor|nama>`, `filter <ml|cv|iot|web|semua>`, `skill`, `pendidikan`, `pengalaman`, `kontak`, `cv`, `github`, `salin-email`, `gerak`, `trailer`, `tanggal`, `echo`, `bersihkan`, plus one hidden `sudo` command.
+
+## Trailer
+
+The hero's **Lihat trailer** button (or the terminal command `trailer`) opens a 34-second machine-learning reel. It is optional and never plays on its own.
+
+- **Look**: a dark "camera viewfinder" style that is deliberately different from the light site: black, plum and amber (inferno colour map), Archivo variable type that stretches on the beat, film grain, letterbox bars and a recording HUD.
+- **Story**: intro type, then the newest repository, [penghitung](https://github.com/Hwarinn66/penghitung) (Dense Object Counter), told as its pipeline (camera, ROI, tiles, YOLO, NMS, count), then InnerSelf, Smart Trash, Face Recognition and Hand Gesture, the data-to-model workflow, the stack, and the name card.
+- **Sync**: one paused GSAP timeline whose every cut sits on the song's beat grid (83 BPM, drop at 12.35 s). The player sets the timeline to the audio clock each frame, so picture and music stay locked and scrubbing works.
+- **Controls**: play/pause, previous/next chapter, a scrubbable track with chapter marks, mute, close. Keyboard: Space/K, ←/→ (3 s), M, Esc. On phones: tap to pause, swipe left/right to change chapter. If the browser blocks audio it runs silently with a button to turn the music on.
+- **Cost**: the trailer code, font and music load only when the button is hovered, focused or pressed. The site's own animation loops pause while it is open.
 
 ## Accessibility and performance
 
@@ -78,6 +88,8 @@ Next.js performs a static export to `out/`. Serve that directory over HTTP (not 
 | `components/use-ambient-motion.ts`, `components/use-tilt.ts` | Pointer, touch and gyroscope motion |
 | `components/glass-dialog.tsx`, `components/project-detail.tsx` | Dialog / bottom sheet and project detail |
 | `components/opening.tsx`, `app/layout.tsx` | First-visit opening and the head script that decides whether it plays |
+| `components/trailer/` | Trailer stage (markup), timeline (all motion, beat-locked), player and data |
+| `lib/trailer-audio.ts`, `public/audio/trailer.mp3` | Trailer soundtrack, started inside the click so browsers allow sound |
 | `app/globals.css` | Design tokens, glass, layouts, diagram animations, responsive rules |
 | `public/assets/`, `public/documents/` | Photos, certificates, technology logos, CV and portfolio PDFs |
 | `REPOSITORY-NOTES.md` | Project evidence, limitations and asset provenance |

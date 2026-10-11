@@ -28,3 +28,11 @@ Education, work history, certificate status, portrait, contact links and PDFs co
 - The Arduino logo describes the Arduino IDE ecosystem, not an official ESP32 logo. Logos identify technologies, not endorsements.
 - Interface icons: [Lucide](https://lucide.dev/), ISC license, installed through `lucide-react`.
 - Local fonts: Bricolage Grotesque, Instrument Sans and JetBrains Mono via Fontsource, SIL Open Font License, included with their installed packages. Fonts are served with the website and do not require a Google Fonts request.
+- Trailer font: Archivo via Fontsource, SIL Open Font License.
+
+## Trailer (12 October 2026)
+
+- Soundtrack (`public/audio/trailer.mp3`): a remix supplied by the site owner, who cut it to length and states that he has the creator's permission to use it here. It was only re-encoded to MP3 with a short fade-out. It is not covered by this repository's license and should not be reused from here.
+- Every visual in the trailer is drawn in code: SVG shapes, a density map computed in the browser (inferno colour map), generated film grain and CSS. No stock footage, photos or third-party graphics.
+- The Dense Object Counter scenes follow the [penghitung](https://github.com/Hwarinn66/penghitung) README and source at commit `ca29dab` (7 October 2026): snapshot from a phone camera (IP Webcam), ROI, 1024 px tiles with 15% overlap, single-class YOLO (`0: object`), global NMS with seam checks, JSON results, and count evaluation at 10/50/100/200/300+.
+- The repository states that trained weights and a real dataset are not included and that it publishes no result numbers. The trailer's objects, the count of 50, the training curve and the dataset split bars are illustrative animation, not measured results.

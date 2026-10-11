@@ -12,16 +12,17 @@ export type TerminalActions = {
   copyEmail: () => void;
   toggleMotion: () => void;
   burst: () => void;
+  openTrailer: () => void;
 };
 
 type Line = { id: number; kind: 'in' | 'out' | 'err' | 'ok'; content: ReactNode };
 
-const commandList = ['bantuan', 'tentang', 'proyek', 'buka', 'filter', 'skill', 'pendidikan', 'pengalaman', 'kontak', 'cv', 'github', 'salin-email', 'gerak', 'tanggal', 'echo', 'bersihkan', 'sudo hire efriza'];
-const quick = ['bantuan', 'proyek', 'tentang', 'skill', 'kontak', 'sudo hire efriza'];
+const commandList = ['trailer', 'bantuan', 'tentang', 'proyek', 'buka', 'filter', 'skill', 'pendidikan', 'pengalaman', 'kontak', 'cv', 'github', 'salin-email', 'gerak', 'tanggal', 'echo', 'bersihkan', 'sudo hire efriza'];
+const quick = ['bantuan', 'proyek', 'trailer', 'tentang', 'skill', 'kontak', 'sudo hire efriza'];
 const aliases: Record<string, string> = {
   help: 'bantuan', '?': 'bantuan', about: 'tentang', whoami: 'tentang', projects: 'proyek', ls: 'proyek', open: 'buka', skills: 'skill', stack: 'skill',
   edu: 'pendidikan', education: 'pendidikan', experience: 'pengalaman', contact: 'kontak', copy: 'salin-email', motion: 'gerak', date: 'tanggal',
-  clear: 'bersihkan', cls: 'bersihkan',
+  clear: 'bersihkan', cls: 'bersihkan', reel: 'trailer', video: 'trailer',
 };
 
 let lineId = 0;
@@ -74,10 +75,11 @@ export default function MiniTerminal({ actions }: { actions: TerminalActions }) 
 
     switch (command) {
       case 'bantuan': return [line('out', <div className="term-grid">
-        {[['tentang', 'siapa saya'], ['proyek', 'daftar tujuh proyek'], ['buka <nomor>', 'detail proyek, mis. buka 2'], ['filter <ml|cv|iot|web>', 'saring kartu proyek'], ['skill', 'teknologi yang saya pakai'],
+        {[['trailer', 'putar trailer machine learning'], ['tentang', 'siapa saya'], ['proyek', 'daftar tujuh proyek'], ['buka <nomor>', 'detail proyek, mis. buka 2'], ['filter <ml|cv|iot|web>', 'saring kartu proyek'], ['skill', 'teknologi yang saya pakai'],
           ['pendidikan', 'kampus dan jurusan'], ['pengalaman', 'riwayat kerja'], ['kontak', 'cara menghubungi saya'], ['cv', 'unduh CV (PDF)'], ['salin-email', 'salin alamat email'], ['gerak', 'jeda atau aktifkan animasi'], ['bersihkan', 'kosongkan layar']]
           .map(([c, d]) => <span key={c}><b>{c}</b><i>{d}</i></span>)}
       </div>), line('out', <>Ada satu perintah rahasia. Petunjuk: <b>sudo</b>.</>)];
+      case 'trailer': actions.openTrailer(); return [line('ok', 'Memutar trailer… (Esc untuk menutup)')];
       case 'tentang': return [line('out', <>{profile.name}, mahasiswa Informatika di {profile.campus}, {profile.location}. Tertarik pada pengembangan aplikasi, machine learning, computer vision, dan IoT. Sedang mencari kesempatan magang IT.</>)];
       case 'proyek': return [line('out', <ol className="term-list">{projects.map((p, i) => <li key={p.id}>{projectButton(p.id, <><b>{i + 1}</b> {p.name}</>)}<i>{p.tags.join(', ')}</i></li>)}</ol>), line('out', <>Ketuk nama proyek, atau ketik <b>buka 1</b>.</>)];
       case 'buka': {

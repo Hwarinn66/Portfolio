@@ -8,7 +8,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   ArrowDown, ArrowUpRight, Award, BadgeCheck, BriefcaseBusiness, CircuitBoard, Copy, FileDown, Github,
   GraduationCap, Layers, LayoutGrid, Linkedin, Mail, MapPin, MessageCircle, Pause, Play, Plus, Route,
-  Smartphone, SquareTerminal, User, X,
+  Clapperboard, Smartphone, SquareTerminal, User, X,
 } from 'lucide-react';
 import { assetPath } from '@/lib/asset-path';
 import { ambient, burstField, haptic } from '@/lib/ambient';
@@ -22,6 +22,11 @@ import ProjectDetail from '@/components/project-detail';
 import ProjectVisual from '@/components/project-visual';
 import { useAmbientMotion } from '@/components/use-ambient-motion';
 import { useTilt } from '@/components/use-tilt';
+import dynamic from 'next/dynamic';
+import { getTrailerAudio, startTrailerAudio } from '@/lib/trailer-audio';
+
+// The trailer (scenes, timeline, player) loads only when someone opens it.
+const Trailer = dynamic(() => import('@/components/trailer/trailer'), { ssr: false });
 
 const sections = [
   { id: 'projects', label: 'Proyek', icon: LayoutGrid },
@@ -127,6 +132,15 @@ export default function Portfolio() {
   const [toast, setToast] = useState<{ key: number; text: string } | null>(null);
   const [active, setActive] = useState('');
   const [scanKey, setScanKey] = useState(0);
+  const [trailerOpen, setTrailerOpen] = useState(false);
+
+  // Sound must start inside the click (mobile browsers), so the shared audio plays before the player mounts.
+  const openTrailer = useCallback(() => {
+    haptic(10);
+    void startTrailerAudio();
+    setTrailerOpen(true);
+  }, []);
+  const preloadTrailer = useCallback(() => { getTrailerAudio(); void import('@/components/trailer/trailer'); }, []);
 
   const visible = useMemo(() => projects.filter(p => (category === 'all' || p.tags.includes(category)) && (!tech || p.stack.includes(tech))), [category, tech]);
 
@@ -185,7 +199,8 @@ export default function Portfolio() {
     copyEmail,
     toggleMotion,
     burst: () => burstField(window.innerWidth / 2, window.innerHeight * 0.45),
-  }), [copyEmail, filterAndReveal, toggleMotion]);
+    openTrailer,
+  }), [copyEmail, filterAndReveal, openTrailer, toggleMotion]);
 
   // Scroll spy for both navigations.
   useEffect(() => {
@@ -434,6 +449,7 @@ export default function Portfolio() {
             <div className="hero-actions">
               <a className="btn btn-solid" href="#projects">Lihat proyek <ArrowDown size={18} /></a>
               <a className="btn btn-glass" href={profile.cv} download>Unduh CV <FileDown size={18} /></a>
+              <button className="btn btn-trailer" onClick={openTrailer} onPointerEnter={preloadTrailer} onFocus={preloadTrailer}><Clapperboard size={18} />Lihat trailer</button>
             </div>
             {gyro === 'needs-permission' && <button className="gyro-button" onClick={requestGyro}><Smartphone size={16} />Aktifkan efek gerak ponsel</button>}
           </div>
@@ -594,6 +610,8 @@ export default function Portfolio() {
       {openIndex >= 0 && <ProjectDetail project={projects[openIndex]} index={openIndex} total={projects.length}
         previous={projects[(openIndex - 1 + projects.length) % projects.length]} next={projects[(openIndex + 1) % projects.length]} onNavigate={navigateProject} />}
     </GlassDialog>
+
+    {trailerOpen && <Trailer onClose={() => setTrailerOpen(false)} onSeeProjects={() => { getTrailerAudio().pause(); setTrailerOpen(false); window.setTimeout(() => scrollToId('projects'), 60); }} />}
 
     <GlassDialog open={Boolean(certificate)} onClose={() => setCertId(null)} labelledBy="cert-dialog-title" size="narrow">
       {certificate?.image && <div className="cert-viewer">
