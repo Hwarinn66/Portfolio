@@ -18,7 +18,7 @@ Light pastel glassmorphism on a "milk glass" field (`#f2f3fa`), with deep indigo
   - Project cards rise in 3D with a column-based lag, and each diagram drifts inside its frame.
   - The terminal opens like a laptop lid; toolkit tiles fly in from scattered positions and assemble the grid.
   - The about portrait opens from a small window; the journey timeline draws itself and lights each stop; certificates fan out; the contact panel grows into place.
-  - Glass orbs drift and turn at their own depth in every section, and the background aurora rotates and shifts colour through the page (desktop).
+  - Glass orbs drift and turn at their own depth in every section; the background aurora rotates through the page and shifts colour per section (desktop).
 - **Parallax**: pointer depth on desktop, gyroscope depth on phones, three-depth particle field.
 - **Typefaces**: Bricolage Grotesque (display), Instrument Sans (body), JetBrains Mono (terminal), all self-hosted through Fontsource.
 
@@ -40,7 +40,10 @@ Terminal commands: `bantuan`, `tentang`, `proyek`, `buka <nomor|nama>`, `filter 
 
 - Respects `prefers-reduced-motion` (static diagrams, no parallax or particles animation) and has a per-tab pause button in the header and footer.
 - Native `<dialog>` for focus trapping and Escape; visible keyboard focus everywhere; text contrast at WCAG AA or better.
-- The particle canvas caps its device-pixel ratio and particle count on phones, pauses in background tabs, and the ambient motion loop writes CSS variables only when values change.
+- Pointer/gyroscope depth is written directly to the few elements that use it, and only while they are near the viewport (no page-wide CSS variables), so it does not trigger page-wide style recalculation while scrolling.
+- The background changes colour per section with a short CSS transition instead of repainting on every scroll frame.
+- The particle canvas caps its device-pixel ratio and particle count on phones, pauses in background tabs and avoids per-frame allocations.
+- Heading blur filters are removed as soon as each heading is in focus.
 - Content is server-rendered into static HTML and readable without JavaScript.
 
 ## Local development

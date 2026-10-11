@@ -9,11 +9,16 @@ export type GyroState = 'off' | 'needs-permission' | 'listening' | 'denied';
 const clamp = (value: number) => Math.max(-1, Math.min(1, value));
 
 /**
- * Drives the --mx / --my CSS variables on every [data-ambient] element and the
- * shared `ambient` object read by the particle canvas.
- * - Mouse: follows the pointer.
- * - Touch screens: follows the gyroscope when it reports, otherwise the finger,
- *   and drifts gently when nothing is touching so the depth stays visible.
+ * Pointer / touch / gyroscope depth.
+ *
+ * One requestAnimationFrame loop smooths the input into `ambient.mx/my`
+ * (-1..1, also read by the particle canvas) and writes the result straight
+ * onto the elements that use it, and only those currently near the viewport:
+ * - [data-shift="N"]  → translate by N px per unit of motion
+ * - .ambient-tilt     → tilt + moving light (hero card)
+ * - .tilt on touch screens, while not being touched → gyroscope tilt + light
+ * Writing to a handful of visible elements instead of to whole sections keeps
+ * style recalculation tiny, so scrolling stays smooth.
  */
 export function useAmbientMotion(paused: boolean) {
   const [gyro, setGyro] = useState<GyroState>('off');
@@ -34,16 +39,48 @@ export function useAmbientMotion(paused: boolean) {
 
   useEffect(() => {
     ambient.paused = paused;
-    let targets: HTMLElement[] = [];
-    const collect = () => { targets = Array.from(document.querySelectorAll<HTMLElement>('[data-ambient]')); };
-    const write = (x: number, y: number) => {
-      const mx = x.toFixed(3), my = y.toFixed(3);
-      for (const el of targets) { el.style.setProperty('--mx', mx); el.style.setProperty('--my', my); }
-    };
-    collect();
-    if (paused) { ambient.mx = 0; ambient.my = 0; write(0, 0); return; }
-
     const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const selector = coarse ? '[data-shift], .ambient-tilt, .tilt' : '[data-shift], .ambient-tilt';
+
+    const setTilt = (el: HTMLElement, mx: number, my: number, ax: number, ay: number, gy0: number) => {
+      el.style.setProperty('--rx', `${(my * -ax).toFixed(2)}deg`);
+      el.style.setProperty('--ry', `${(mx * ay).toFixed(2)}deg`);
+      el.style.setProperty('--gx', `${(50 + mx * 55).toFixed(1)}%`);
+      el.style.setProperty('--gy', `${(gy0 + my * 48).toFixed(1)}%`);
+    };
+    const apply = (el: HTMLElement, mx: number, my: number) => {
+      const shift = el.dataset.shift;
+      if (shift) { const d = Number(shift); el.style.translate = `${(mx * d).toFixed(1)}px ${(my * d).toFixed(1)}px`; }
+      if ('active' in el.dataset) return; // the finger or mouse is driving this one (useTilt)
+      if (el.classList.contains('ambient-tilt')) setTilt(el, mx, my, 7, 9, 30);
+      else if (coarse && el.classList.contains('tilt')) setTilt(el, mx, my, 5, 6, 32);
+    };
+    const clear = (el: HTMLElement) => {
+      el.style.translate = '';
+      if (!('active' in el.dataset)) for (const name of ['--rx', '--ry', '--gx', '--gy']) el.style.removeProperty(name);
+    };
+
+    if (paused) {
+      ambient.mx = 0; ambient.my = 0;
+      document.querySelectorAll<HTMLElement>(selector).forEach(clear);
+      return;
+    }
+
+    // Track which consumers are on (or near) the screen.
+    const visible = new Set<HTMLElement>();
+    const observed = new WeakSet<Element>();
+    const io = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const el = entry.target as HTMLElement;
+        if (entry.isIntersecting) { visible.add(el); apply(el, ambient.mx, ambient.my); }
+        else visible.delete(el);
+      }
+    }, { rootMargin: '160px 0px' });
+    const collect = () => document.querySelectorAll<HTMLElement>(selector).forEach(el => {
+      if (!observed.has(el)) { observed.add(el); io.observe(el); }
+    });
+    collect();
+
     let tx = 0, ty = 0, lastInput = -1e9, lastGyro = -1e9, baseBeta: number | null = null;
     let raf = 0, frame = 0, lastX = 9, lastY = 9;
 
@@ -79,12 +116,12 @@ export function useAmbientMotion(paused: boolean) {
       }
       ambient.mx += (tx - ambient.mx) * 0.07;
       ambient.my += (ty - ambient.my) * 0.07;
-      if (++frame % 90 === 0) collect();
-      // Phones repaint glass less often: write CSS variables every other frame.
-      if (coarse && frame % 2) return;
-      if (Math.abs(ambient.mx - lastX) > 0.003 || Math.abs(ambient.my - lastY) > 0.003) {
-        lastX = ambient.mx; lastY = ambient.my;
-        write(ambient.mx, ambient.my);
+      if (++frame % 60 === 0) collect();
+      if (Math.abs(ambient.mx - lastX) < 0.002 && Math.abs(ambient.my - lastY) < 0.002) return;
+      lastX = ambient.mx; lastY = ambient.my;
+      for (const el of visible) {
+        if (!el.isConnected) { visible.delete(el); continue; }
+        apply(el, ambient.mx, ambient.my);
       }
     };
 
@@ -95,6 +132,7 @@ export function useAmbientMotion(paused: boolean) {
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
+      io.disconnect();
       window.removeEventListener('pointermove', onPointer);
       window.removeEventListener('touchstart', onTouch);
       window.removeEventListener('touchmove', onTouch);

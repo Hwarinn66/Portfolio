@@ -55,6 +55,11 @@ export default function BackgroundField({ paused }: { paused: boolean }) {
 
     const radius = () => (coarse ? 120 : 150);
 
+    // Solid colours + globalAlpha: no per-frame string building, fewer style changes.
+    const solid = colors.map(c => `rgb(${c})`);
+    const ink = 'rgb(84 64 217)';
+    const TAU = Math.PI * 2;
+
     const draw = (time: number, animate: boolean) => {
       ctx.clearRect(0, 0, width, height);
       const scroll = window.scrollY;
@@ -63,9 +68,12 @@ export default function BackgroundField({ paused }: { paused: boolean }) {
       const ty = active ? pointer.y : height * (0.42 + 0.26 * Math.sin(time / 3900 + 1.3));
       sensor.x += (tx - sensor.x) * (active ? 0.25 : 0.03);
       sensor.y += (ty - sensor.y) * (active ? 0.25 : 0.03);
-      const R = radius();
+      const R = radius(), R2 = R * R;
+      const reach = R * 1.15, reach2 = reach * reach;
       const near: Particle[] = [];
       const wrapH = height + 60;
+      const mx = ambient.mx, my = ambient.my;
+      const push = active ? 1.6 : 0.6;
 
       for (const p of particles) {
         if (animate) {
@@ -73,74 +81,88 @@ export default function BackgroundField({ paused }: { paused: boolean }) {
           if (p.x < -20) p.x = width + 20; else if (p.x > width + 20) p.x = -20;
           if (p.y < -20) p.y += wrapH; else if (p.y > height + 40) p.y -= wrapH;
         }
-        const rx = p.x + ambient.mx * 22 * p.z;
+        const rx = p.x + mx * 22 * p.z;
         let ry = (p.y - scroll * 0.14 * p.z) % wrapH;
         if (ry < -30) ry += wrapH;
-        ry += ambient.my * 16 * p.z;
+        ry += my * 16 * p.z;
         if (animate) {
           const dx = rx + p.ox - sensor.x, dy = ry + p.oy - sensor.y;
-          const d = Math.hypot(dx, dy);
-          if (d < R && d > 0.1) {
-            const force = (1 - d / R) * (active ? 1.6 : 0.6) * p.z;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < R2 && d2 > 0.01) {
+            const d = Math.sqrt(d2);
+            const force = (1 - d / R) * push * p.z;
             p.ox += (dx / d) * force; p.oy += (dy / d) * force;
           }
           p.ox *= 0.93; p.oy *= 0.93;
         }
         p.sx = rx + p.ox; p.sy = ry + p.oy;
-        if (!still && Math.hypot(p.sx - sensor.x, p.sy - sensor.y) < R * 1.15) near.push(p);
+        if (!still) {
+          const ex = p.sx - sensor.x, ey = p.sy - sensor.y;
+          if (ex * ex + ey * ey < reach2) near.push(p);
+        }
       }
 
       // Links: sensor to points, then points to each other inside the range.
       if (near.length) {
         ctx.lineWidth = 1;
+        ctx.strokeStyle = ink;
         for (const p of near) {
-          const d = Math.hypot(p.sx - sensor.x, p.sy - sensor.y);
-          ctx.strokeStyle = `rgb(84 64 217 / ${(1 - d / (R * 1.15)) * 0.32})`;
+          const d = Math.sqrt((p.sx - sensor.x) ** 2 + (p.sy - sensor.y) ** 2);
+          ctx.globalAlpha = (1 - d / reach) * 0.32;
           ctx.beginPath(); ctx.moveTo(sensor.x, sensor.y); ctx.lineTo(p.sx, p.sy); ctx.stroke();
         }
         for (let i = 0; i < near.length; i++) for (let j = i + 1; j < near.length; j++) {
           const a = near[i], b = near[j];
-          const d = Math.hypot(a.sx - b.sx, a.sy - b.sy);
-          if (d > 96) continue;
-          ctx.strokeStyle = `rgb(84 64 217 / ${(1 - d / 96) * 0.2})`;
+          const dx = a.sx - b.sx, dy = a.sy - b.sy;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > 9216) continue; // 96px
+          ctx.globalAlpha = (1 - Math.sqrt(d2) / 96) * 0.2;
           ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
         }
       }
 
-      for (const p of particles) {
-        const twinkle = 0.75 + Math.sin(time / 900 + p.phase) * 0.25;
-        ctx.fillStyle = `rgb(${colors[p.c]} / ${(0.22 + p.z * 0.4) * twinkle})`;
-        ctx.beginPath(); ctx.arc(p.sx, p.sy, p.r, 0, Math.PI * 2); ctx.fill();
+      const t = time / 900;
+      for (let c = 0; c < solid.length; c++) {
+        ctx.fillStyle = solid[c];
+        for (const p of particles) {
+          if (p.c !== c) continue;
+          ctx.globalAlpha = (0.22 + p.z * 0.4) * (0.75 + Math.sin(t + p.phase) * 0.25);
+          ctx.beginPath(); ctx.arc(p.sx, p.sy, p.r, 0, TAU); ctx.fill();
+        }
       }
 
+      ctx.strokeStyle = ink;
       if (!still) {
-        ctx.strokeStyle = 'rgb(84 64 217 / .35)';
-        ctx.beginPath(); ctx.arc(sensor.x, sensor.y, active ? 5 : 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath(); ctx.arc(sensor.x, sensor.y, active ? 5 : 3, 0, TAU); ctx.stroke();
       }
 
+      if (ripples.length) ctx.lineWidth = 1.5;
       for (let i = ripples.length - 1; i >= 0; i--) {
         const ripple = ripples[i];
         ripple.age += 1;
         const progress = ripple.age / 55;
         if (progress >= 1) { ripples.splice(i, 1); continue; }
-        ctx.strokeStyle = `rgb(84 64 217 / ${(1 - progress) * 0.4})`;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(ripple.x, ripple.y, 12 + progress * 140, 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = (1 - progress) * 0.4;
+        ctx.beginPath(); ctx.arc(ripple.x, ripple.y, 12 + progress * 140, 0, TAU); ctx.stroke();
       }
       for (let i = sparks.length - 1; i >= 0; i--) {
         const spark = sparks[i];
         spark.x += spark.vx; spark.y += spark.vy; spark.vy += 0.06; spark.vx *= 0.985; spark.life -= 0.012;
         if (spark.life <= 0) { sparks.splice(i, 1); continue; }
-        ctx.fillStyle = `rgb(${colors[spark.c]} / ${spark.life})`;
-        ctx.beginPath(); ctx.arc(spark.x, spark.y, 2.2 + spark.life * 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = solid[spark.c];
+        ctx.globalAlpha = spark.life;
+        ctx.beginPath(); ctx.arc(spark.x, spark.y, 2.2 + spark.life * 2, 0, TAU); ctx.fill();
       }
+      ctx.globalAlpha = 1;
     };
 
     const impulse = (x: number, y: number, strength: number) => {
       ripples.push({ x, y, age: 0 });
       for (const p of particles) {
         const dx = p.sx - x, dy = p.sy - y;
-        const d = Math.hypot(dx, dy);
+        const d = Math.sqrt(dx * dx + dy * dy);
         if (d < 260 && d > 0.1) { const f = (1 - d / 260) * strength; p.ox += (dx / d) * f; p.oy += (dy / d) * f; }
       }
     };
@@ -191,8 +213,11 @@ export default function BackgroundField({ paused }: { paused: boolean }) {
     };
   }, [paused]);
 
-  return <div className="field" aria-hidden="true" data-ambient>
-    <div className="aurora"><span className="blob blob-1" /><span className="blob blob-2" /><span className="blob blob-3" /><span className="blob blob-4" /><span className="blob blob-5" /></div>
+  // Colours change per section via data-mood on .field (a short CSS transition), never on every scroll frame.
+  return <div className="field" aria-hidden="true">
+    <div className="aurora" data-shift={-25}><div className="aurora-spin">
+      {[1, 2, 3, 4, 5].map(i => <span key={i} className={`blob blob-${i}`} />)}
+    </div></div>
     <canvas ref={canvasRef} />
   </div>;
 }

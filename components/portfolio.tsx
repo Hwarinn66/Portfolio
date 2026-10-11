@@ -30,8 +30,6 @@ const sections = [
   { id: 'journey', label: 'Perjalanan', icon: Route },
 ];
 
-const depth = (d: number) => ({ '--d': d }) as CSSProperties;
-
 /** Words wrapped in masks so they can rise into place as the heading scrolls in. */
 function Split({ text }: { text: string }) {
   const words = text.split(' ');
@@ -41,7 +39,7 @@ function Split({ text }: { text: string }) {
 type OrbProps = { shape?: 'circle' | 'pill' | 'square'; depth: number; d: number; style: CSSProperties; className?: string };
 /** Decorative glass shape that drifts at its own depth while scrolling. */
 function Orb({ shape = 'circle', depth: z, d, style, className = '' }: OrbProps) {
-  return <span className={`orb orb-${shape} ${className}`} data-depth={z} style={{ '--d': d, ...style } as CSSProperties} aria-hidden="true" />;
+  return <span className={`orb orb-${shape} ${className}`} data-depth={z} data-shift={d} style={style} aria-hidden="true" />;
 }
 
 const bandRows = [
@@ -197,6 +195,15 @@ export default function Portfolio() {
     return () => observer.disconnect();
   }, []);
 
+  // Background mood: the aurora shifts colour as you move between sections (desktop, motion on).
+  useEffect(() => {
+    const field = root.current?.querySelector<HTMLElement>('.field');
+    if (!field) return;
+    const moods: Record<string, string> = { home: 'a', projects: 'a', terminal: 'b', toolkit: 'b', about: 'b', journey: 'c', contact: 'c' };
+    const wide = window.matchMedia('(min-width: 900px)').matches;
+    field.dataset.mood = !paused && wide ? moods[active] ?? 'a' : 'a';
+  }, [active, paused]);
+
   // Sliding glass indicators under the active nav link and filter.
   useLayoutEffect(() => {
     const place = (container: HTMLElement | null, selector: string) => {
@@ -231,14 +238,14 @@ export default function Portfolio() {
       // 1. The hero comes apart: lines split sideways, the photo card leans in, chips scatter.
       const pin = desktop && tall;
       gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: {
-        trigger: '#home', start: 'top top', end: pin ? '+=85%' : 'bottom top', scrub: 0.7, pin, anticipatePin: 1, invalidateOnRefresh: true,
+        trigger: '#home', start: 'top top', end: pin ? '+=85%' : 'bottom top', scrub: 0.4, pin, anticipatePin: 1, invalidateOnRefresh: true,
       } })
         .to('.hero-title .line:nth-child(1)', { x: vw(-0.2) }, 0)
         .to('.hero-title .line:nth-child(2)', { x: vw(0.16) }, 0)
         .to('.hero-title .line:nth-child(3)', { x: vw(-0.1) }, 0)
         .to('.hero-title', { y: vh(-0.06), scale: 0.9, transformOrigin: '0% 50%' }, 0)
-        // Explicit start values: these elements are still in their CSS entrance animation when this is built.
-        .fromTo('.hero .status-pill', { y: 0, autoAlpha: 1 }, { y: vh(-0.12), autoAlpha: 0, immediateRender: false }, 0)
+        // These wrappers carry no CSS animation (their children do), so the two never fight over the same element.
+        .fromTo('.hero-status', { y: 0, autoAlpha: 1 }, { y: vh(-0.12), autoAlpha: 0, immediateRender: false }, 0)
         .fromTo('.hero-copy', { y: 0, autoAlpha: 1 }, { y: vh(-0.1), autoAlpha: 0, immediateRender: false }, 0.1)
         .fromTo('.hero-facts', { y: 0, autoAlpha: 1 }, { y: vh(0.05), autoAlpha: 0, immediateRender: false }, 0)
         .to('.hero-stage', { y: vh(-0.14), scale: desktop ? 1.16 : 1.06, rotation: -5, transformOrigin: '50% 40%' }, 0)
@@ -249,7 +256,7 @@ export default function Portfolio() {
       // 2. Glass band: the two rows slide against each other; scroll speed skews them.
       gsap.utils.toArray<HTMLElement>('.band-row', scope).forEach((row, i) => {
         gsap.fromTo(row, { xPercent: i % 2 ? -34 : -2 }, { xPercent: i % 2 ? -2 : -34, ease: 'none',
-          scrollTrigger: { trigger: '.band', start: 'top bottom', end: 'bottom top', scrub: 0.5 } });
+          scrollTrigger: { trigger: '.band', start: 'top bottom', end: 'bottom top', scrub: 0.3 } });
       });
       const skew = gsap.quickTo('.band-row', 'skewX', { duration: 0.45, ease: 'power3' });
       ScrollTrigger.create({ trigger: '.band', start: 'top bottom', end: 'bottom top',
@@ -259,41 +266,44 @@ export default function Portfolio() {
 
       // 3. Headings rise word by word out of a mask, from blur into focus.
       gsap.utils.toArray<HTMLElement>('.split', scope).forEach(heading => {
-        gsap.fromTo(heading.querySelectorAll('.word'),
+        const words = Array.from(heading.querySelectorAll<HTMLElement>('.word'));
+        gsap.fromTo(words,
           { yPercent: 115, rotation: 7, ...(desktop ? { filter: 'blur(10px)' } : {}) },
           { yPercent: 0, rotation: 0, ...(desktop ? { filter: 'blur(0px)' } : {}), stagger: 0.14, ease: 'none',
-            scrollTrigger: { trigger: heading, start: 'top 94%', end: 'top 60%', scrub: 0.6 } });
+            scrollTrigger: { trigger: heading, start: 'top 94%', end: 'top 60%', scrub: 0.35 },
+            // A leftover blur(0px) still costs a filter pass every frame; drop it whenever the reveal is at rest.
+            onUpdate() { const p = this.progress(); if (desktop && (p === 0 || p === 1)) words.forEach(w => { w.style.filter = 'none'; }); } });
       });
       gsap.utils.toArray<HTMLElement>('.section-head p', scope).forEach(lead => {
         gsap.fromTo(lead, { y: 40 * k, autoAlpha: 0.15 }, { y: 0, autoAlpha: 1, ease: 'none',
-          scrollTrigger: { trigger: lead, start: 'top 98%', end: 'top 72%', scrub: 0.6 } });
+          scrollTrigger: { trigger: lead, start: 'top 98%', end: 'top 72%', scrub: 0.35 } });
       });
 
       // 4. The terminal opens like a laptop lid.
       gsap.fromTo('.terminal-frame', { rotationX: desktop ? 34 : 20, y: 110 * k, scale: 0.86, transformPerspective: 1400, transformOrigin: '50% 100%' },
-        { rotationX: 0, y: 0, scale: 1, ease: 'none', scrollTrigger: { trigger: '.terminal-layout', start: 'top bottom', end: 'top 30%', scrub: 0.7 } });
+        { rotationX: 0, y: 0, scale: 1, ease: 'none', scrollTrigger: { trigger: '.terminal-layout', start: 'top bottom', end: 'top 30%', scrub: 0.4 } });
 
       // 5. Toolkit tiles fly in from scattered positions and assemble the grid.
       const seeded = (i: number, salt: number) => { const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return x - Math.floor(x); };
       gsap.utils.toArray<HTMLElement>('.tool-cell', scope).forEach((cell, i) => {
         gsap.fromTo(cell, { x: (seeded(i, 1) - 0.5) * 380 * k, y: (0.3 + seeded(i, 2)) * 220 * k, rotation: (seeded(i, 3) - 0.5) * 56, scale: 0.7 },
-          { x: 0, y: 0, rotation: 0, scale: 1, ease: 'none', scrollTrigger: { trigger: '.tool-grid', start: 'top 100%', end: 'top 38%', scrub: 0.8 } });
+          { x: 0, y: 0, rotation: 0, scale: 1, ease: 'none', scrollTrigger: { trigger: '.tool-grid', start: 'top 100%', end: 'top 38%', scrub: 0.45 } });
       });
 
       // 6. About: the portrait opens from a small window while the photo settles.
       gsap.fromTo('.about-frame', { clipPath: 'inset(18% 16% 18% 16% round 80px)' }, { clipPath: 'inset(0% 0% 0% 0% round 34px)', ease: 'none',
-        scrollTrigger: { trigger: '.about-visual', start: 'top 95%', end: 'top 35%', scrub: 0.6 } });
+        scrollTrigger: { trigger: '.about-visual', start: 'top 95%', end: 'top 35%', scrub: 0.35 } });
       gsap.fromTo('.about-photo img', { scale: 1.32 }, { scale: 1, ease: 'none',
-        scrollTrigger: { trigger: '.about-visual', start: 'top bottom', end: 'bottom top', scrub: 0.6 } });
+        scrollTrigger: { trigger: '.about-visual', start: 'top bottom', end: 'bottom top', scrub: 0.35 } });
 
       // 7. Journey: the timeline draws itself; each stop slides in and lights its dot.
       gsap.fromTo('.edu-card', { x: -70 * k, rotationY: 14, transformPerspective: 1200 }, { x: 0, rotationY: 0, ease: 'none',
-        scrollTrigger: { trigger: '.journey-layout', start: 'top bottom', end: 'top 55%', scrub: 0.6 } });
+        scrollTrigger: { trigger: '.journey-layout', start: 'top bottom', end: 'top 55%', scrub: 0.35 } });
       gsap.fromTo('.timeline-line', { scaleY: 0 }, { scaleY: 1, transformOrigin: '50% 0%', ease: 'none',
-        scrollTrigger: { trigger: '.timeline', start: 'top 70%', end: 'bottom 55%', scrub: 0.5 } });
+        scrollTrigger: { trigger: '.timeline', start: 'top 70%', end: 'bottom 55%', scrub: 0.3 } });
       gsap.utils.toArray<HTMLElement>('.timeline li', scope).forEach(item => {
         gsap.fromTo(item, { x: 100 * k, rotationY: -18, transformPerspective: 1200 }, { x: 0, rotationY: 0, ease: 'none',
-          scrollTrigger: { trigger: item, start: 'top bottom', end: 'top 68%', scrub: 0.6 } });
+          scrollTrigger: { trigger: item, start: 'top bottom', end: 'top 68%', scrub: 0.35 } });
         ScrollTrigger.create({ trigger: item, start: 'top 62%', onEnter: () => item.classList.add('is-reached'), onLeaveBack: () => item.classList.remove('is-reached') });
       });
 
@@ -301,12 +311,12 @@ export default function Portfolio() {
       gsap.utils.toArray<HTMLElement>('.cert-shell', scope).forEach((shell, i) => {
         const side = desktop ? [-1, 0, 1][i % 3] : (i % 2 ? 1 : -1);
         gsap.fromTo(shell, { y: 150 * k, x: -side * 70 * k, rotation: side * 10 * k }, { y: 0, x: 0, rotation: 0, ease: 'none',
-          scrollTrigger: { trigger: desktop ? '.cert-grid' : shell, start: 'top bottom', end: desktop ? 'top 45%' : 'top 70%', scrub: 0.7 } });
+          scrollTrigger: { trigger: desktop ? '.cert-grid' : shell, start: 'top bottom', end: desktop ? 'top 45%' : 'top 70%', scrub: 0.4 } });
       });
 
       // 9. The contact panel grows into place.
       gsap.fromTo('.contact-panel', { scale: 0.84, y: 90 * k, borderRadius: desktop ? 120 : 60 }, { scale: 1, y: 0, borderRadius: desktop ? 34 : 28, ease: 'none',
-        scrollTrigger: { trigger: '#contact', start: 'top bottom', end: 'top 25%', scrub: 0.7 } });
+        scrollTrigger: { trigger: '#contact', start: 'top bottom', end: 'top 25%', scrub: 0.4 } });
 
       // 10. Glass orbs and floating badges drift at their own depth.
       gsap.utils.toArray<HTMLElement>('[data-depth]', scope).forEach(el => {
@@ -314,16 +324,11 @@ export default function Portfolio() {
         const spin = el.classList.contains('orb') ? 40 : 0;
         const inHero = pin && el.closest('#home');
         gsap.fromTo(el, { y: d, rotation: -spin }, { y: -d, rotation: spin, ease: 'none',
-          scrollTrigger: { trigger: el.closest('section') ?? el, start: 'top bottom', end: 'bottom top', scrub: 0.8, pinnedContainer: inHero ? '#home' : undefined } });
+          scrollTrigger: { trigger: el.closest('section') ?? el, start: 'top bottom', end: 'bottom top', scrub: 0.45, pinnedContainer: inHero ? '#home' : undefined } });
       });
 
-      // 11. The aurora turns and shifts colour through the page (desktop only; repainting it is costly on phones).
-      if (desktop) {
-        gsap.to('.aurora', { rotation: 28, scale: 1.12, ease: 'none', scrollTrigger: { trigger: '#main', start: 'top top', end: 'bottom bottom', scrub: 1 } });
-        const mood = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: '#main', start: 'top top', end: 'bottom bottom', scrub: 1.2 } });
-        ([['.blob-1', '#c9baff', '#bdeed8', '#ffcbb6'], ['.blob-2', '#ffcbb6', '#bbd7ff', '#c9baff'], ['.blob-3', '#bdeed8', '#ffe8ad', '#bbd7ff'], ['.blob-4', '#bbd7ff', '#c9baff', '#bdeed8']] as const)
-          .forEach(([selector, from, mid, to]) => { mood.fromTo(selector, { '--c': from }, { '--c': mid, duration: 1 }, 0).to(selector, { '--c': to, duration: 1 }, 1); });
-      }
+      // 11. The aurora slowly turns through the page (desktop). Its colours follow the section (see the mood effect).
+      if (desktop) gsap.to('.aurora-spin', { rotation: 28, scale: 1.12, ease: 'none', scrollTrigger: { trigger: '#main', start: 'top top', end: 'bottom bottom', scrub: 1 } });
 
       return () => {
         scope.classList.remove('has-scroll-fx');
@@ -351,9 +356,9 @@ export default function Portfolio() {
         const grid = shell.parentElement;
         const lag = desktop && grid ? Math.round((shell.offsetLeft / grid.offsetWidth) * 14) : 0;
         if (lift) gsap.fromTo(lift, { y: 170 * k, rotationX: 24 * k, scale: 0.9, transformPerspective: 1200, transformOrigin: '50% 0%' },
-          { y: 0, rotationX: 0, scale: 1, ease: 'none', scrollTrigger: { trigger: shell, start: `top ${100 + lag}%`, end: `top ${62 + lag}%`, scrub: 0.7 } });
+          { y: 0, rotationX: 0, scale: 1, ease: 'none', scrollTrigger: { trigger: shell, start: `top ${100 + lag}%`, end: `top ${62 + lag}%`, scrub: 0.4 } });
         if (svg) gsap.fromTo(svg, { yPercent: 10 }, { yPercent: -10, ease: 'none',
-          scrollTrigger: { trigger: shell, start: 'top bottom', end: 'bottom top', scrub: 0.5 } });
+          scrollTrigger: { trigger: shell, start: 'top bottom', end: 'bottom top', scrub: 0.3 } });
       });
     });
     ScrollTrigger.sort();
@@ -398,18 +403,18 @@ export default function Portfolio() {
     </nav>
 
     <main id="main">
-      <section id="home" className="hero" data-ambient>
+      <section id="home" className="hero">
         <Orb depth={0.9} d={40} style={{ right: '3%', top: '12%', '--s': '130px' } as CSSProperties} />
         <Orb shape="square" depth={1.3} d={-28} style={{ left: '44%', bottom: '7%', '--s': '74px' } as CSSProperties} className="orb-hide-sm" />
         <div className="wrap hero-grid">
-          <p className="status-pill glass"><span className="pulse-dot" aria-hidden="true" />Terbuka untuk magang IT</p>
+          <div className="hero-status"><p className="status-pill glass"><span className="pulse-dot" aria-hidden="true" />Terbuka untuk magang IT</p></div>
           <h1 className="hero-title" aria-label="Dari ide menjadi sistem.">
             {['Dari ide', 'menjadi', 'sistem.'].map((text, i) => <span className="line" key={text} aria-hidden="true"><span style={{ '--i': i } as CSSProperties}>{text}</span></span>)}
           </h1>
 
           <div className="hero-stage">
             <div className="lens-enter">
-              <figure ref={lens} className="hero-lens glass tilt ambient-tilt" onPointerDown={() => setScanKey(k => k + 1)}>
+              <figure ref={lens} className="hero-lens glass tilt ambient-tilt" data-shift={16} onPointerDown={() => setScanKey(k => k + 1)}>
                 <div className="lens-photo">
                   <Image src={assetPath('/assets/efriza-hero.webp')} alt="Potret Efriza Taufiqurrohman di depan gedung BNI pada malam hari" width={1152} height={1536} priority sizes="(max-width: 899px) 60vw, 360px" />
                   <div className="face-box" key={scanKey} style={scanKey ? { '--fd': '0s' } as CSSProperties : undefined} aria-hidden="true"><i /><i /><i /><i /><span>Efriza, terdeteksi</span></div>
@@ -417,9 +422,9 @@ export default function Portfolio() {
                 <figcaption><strong>{profile.name}</strong><span>Mahasiswa Informatika, UBSI</span></figcaption>
               </figure>
             </div>
-            <span className="chip-wrap chip-a" style={depth(34)} aria-hidden="true"><span className="hero-chip glass"><img src={assetPath('/assets/logos/python.svg')} alt="" width={22} height={22} />Python</span></span>
-            <span className="chip-wrap chip-b" style={depth(52)} aria-hidden="true"><span className="hero-chip glass"><img src={assetPath('/assets/logos/tensorflow.svg')} alt="" width={22} height={22} />TensorFlow</span></span>
-            <span className="chip-wrap chip-c" style={depth(24)} aria-hidden="true"><span className="hero-chip glass"><CircuitBoard size={20} strokeWidth={1.6} />ESP32</span></span>
+            <span className="chip-wrap chip-a" data-shift={34} aria-hidden="true"><span className="hero-chip glass"><img src={assetPath('/assets/logos/python.svg')} alt="" width={22} height={22} />Python</span></span>
+            <span className="chip-wrap chip-b" data-shift={52} aria-hidden="true"><span className="hero-chip glass"><img src={assetPath('/assets/logos/tensorflow.svg')} alt="" width={22} height={22} />TensorFlow</span></span>
+            <span className="chip-wrap chip-c" data-shift={24} aria-hidden="true"><span className="hero-chip glass"><CircuitBoard size={20} strokeWidth={1.6} />ESP32</span></span>
           </div>
 
           <div className="hero-copy">
@@ -441,7 +446,7 @@ export default function Portfolio() {
 
       <GlassBand />
 
-      <section id="projects" className="section" data-ambient>
+      <section id="projects" className="section">
         <Orb depth={1.4} d={36} style={{ left: '-50px', top: '6%', '--s': '190px' } as CSSProperties} />
         <Orb shape="pill" depth={0.9} d={-30} style={{ right: '-70px', top: '46%', '--w': '260px', '--h': '96px' } as CSSProperties} />
         <div className="wrap">
@@ -472,7 +477,7 @@ export default function Portfolio() {
         </div>
       </section>
 
-      <section id="terminal" className="section terminal-section" data-ambient>
+      <section id="terminal" className="section terminal-section">
         <Orb depth={1.1} d={30} style={{ right: '7%', top: '8%', '--s': '96px' } as CSSProperties} />
         <div className="wrap terminal-layout">
           <header className="section-head">
@@ -483,7 +488,7 @@ export default function Portfolio() {
         </div>
       </section>
 
-      <section id="toolkit" className="section" data-ambient>
+      <section id="toolkit" className="section">
         <Orb shape="square" depth={1.3} d={-34} style={{ left: '3%', bottom: '8%', '--s': '118px' } as CSSProperties} />
         <Orb depth={0.8} d={26} style={{ right: '5%', top: '14%', '--s': '64px' } as CSSProperties} className="orb-hide-sm" />
         <div className="wrap">
@@ -499,15 +504,15 @@ export default function Portfolio() {
         </div>
       </section>
 
-      <section id="about" className="section" data-ambient>
+      <section id="about" className="section">
         <Orb depth={1.0} d={32} style={{ right: '2%', top: '10%', '--s': '150px' } as CSSProperties} />
         <div className="wrap about-layout">
           <div className="about-visual">
             <figure className="about-frame glass" data-depth="0.12">
               <div className="about-photo"><Image src={assetPath('/assets/efriza-about.webp')} alt="Potret studio Efriza Taufiqurrohman" width={1024} height={1536} sizes="(max-width: 899px) 78vw, 400px" /></div>
             </figure>
-            <div className="about-badge glass" data-depth="0.4" style={depth(30)}><GraduationCap size={22} /><span><strong>{profile.semester}</strong>{profile.degree}</span></div>
-            <div className="about-chip glass" data-depth="0.6" style={depth(46)}><MapPin size={16} />Bekasi, Indonesia</div>
+            <div className="about-badge glass" data-depth="0.4" data-shift={30}><GraduationCap size={22} /><span><strong>{profile.semester}</strong>{profile.degree}</span></div>
+            <div className="about-chip glass" data-depth="0.6" data-shift={46}><MapPin size={16} />Bekasi, Indonesia</div>
           </div>
           <div className="about-copy">
             <header className="section-head">
@@ -521,7 +526,7 @@ export default function Portfolio() {
         </div>
       </section>
 
-      <section id="journey" className="section" data-ambient>
+      <section id="journey" className="section">
         <Orb shape="pill" depth={1.2} d={-30} style={{ left: '-60px', top: '34%', '--w': '210px', '--h': '82px' } as CSSProperties} />
         <div className="wrap">
           <header className="section-head">
@@ -550,7 +555,7 @@ export default function Portfolio() {
         </div>
       </section>
 
-      <section id="contact" className="section contact-section" data-ambient>
+      <section id="contact" className="section contact-section">
         <Orb depth={1.2} d={36} style={{ right: '9%', top: '4%', '--s': '140px' } as CSSProperties} />
         <Orb shape="square" depth={0.8} d={-24} style={{ left: '5%', bottom: '6%', '--s': '80px' } as CSSProperties} className="orb-hide-sm" />
         <div className="wrap">
