@@ -1,104 +1,102 @@
 'use client';
 
-import { assetPath } from '@/lib/asset-path';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { flushSync } from 'react-dom';
 import Image from 'next/image';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
-  ArrowDown, ArrowRight, ArrowUpRight, Award, BadgeCheck, BookOpen,
-  Braces, BriefcaseBusiness, Calculator, CalendarDays, Camera, Check,
-  ChevronDown, CircuitBoard, Code2, Cpu, FileDown, Github, GraduationCap,
-  Hand, Laptop, Linkedin, Mail, MapPin, Menu, Network, Pause, Play,
-  Radio, ScanFace, Terminal, Users, Wallet, X,
+  ArrowDown, ArrowUpRight, Award, BadgeCheck, BriefcaseBusiness, CircuitBoard, Copy, FileDown, Github,
+  GraduationCap, Layers, LayoutGrid, Linkedin, Mail, MapPin, MessageCircle, Pause, Play, Plus, Route,
+  Smartphone, SquareTerminal, User, X,
 } from 'lucide-react';
-import { featuredProjects, otherProjects, technologies, type Project } from '@/lib/projects';
-import ScrollStory from '@/components/scroll-story';
+import { assetPath } from '@/lib/asset-path';
+import { ambient, burstField, haptic } from '@/lib/ambient';
+import { categories, projects, projectsUsing, techName, technologies, type Category, type Project, type TechId } from '@/lib/projects';
+import { certificates, experience, profile } from '@/lib/profile';
+import BackgroundField from '@/components/background-field';
+import GlassDialog from '@/components/glass-dialog';
+import MiniTerminal from '@/components/mini-terminal';
+import ProjectDetail from '@/components/project-detail';
+import ProjectVisual from '@/components/project-visual';
+import { useAmbientMotion } from '@/components/use-ambient-motion';
+import { useTilt } from '@/components/use-tilt';
 
-const github = 'https://github.com/Hwarinn66';
-const cv = assetPath('/documents/CV-Efriza-Taufiqurrohman.pdf');
-const navigation = [ ['Proyek', '#projects'], ['Toolkit', '#toolkit'], ['Tentang', '#about'], ['Perjalanan', '#journey'] ];
+const sections = [
+  { id: 'projects', label: 'Proyek', icon: LayoutGrid },
+  { id: 'terminal', label: 'Terminal', icon: SquareTerminal },
+  { id: 'toolkit', label: 'Toolkit', icon: Layers },
+  { id: 'about', label: 'Tentang', icon: User },
+  { id: 'journey', label: 'Perjalanan', icon: Route },
+];
 
-function TechLogo({ name, logo, compact = false }: { name: string; logo: string; compact?: boolean }) {
-  return <span className={compact ? 'tech-logo compact' : 'tech-logo'}><img src={assetPath(`/assets/logos/${logo}.svg`)} alt={name} width={32} height={32} loading="lazy" /></span>;
+const depth = (d: number) => ({ '--d': d }) as CSSProperties;
+
+function ProjectCard({ project, onOpen }: { project: Project; onOpen: (id: string) => void }) {
+  const tilt = useTilt<HTMLElement>(project.featured ? 7 : 10);
+  return <article ref={tilt} className={`project-card glass tilt ${project.featured ? 'is-featured' : ''}`} style={{ viewTransitionName: `card-${project.id}` } as CSSProperties}>
+    <div className="card-visual"><ProjectVisual id={project.id} /></div>
+    <div className="card-body">
+      <p className="card-kind">{project.kind}</p>
+      <h3>{project.name}</h3>
+      <p className="card-subtitle">{project.subtitle}</p>
+      <div className="card-foot">
+        <span className="card-logos">{project.stack.map(id => <img key={id} src={assetPath(`/assets/logos/${id}.svg`)} alt={techName(id)} title={techName(id)} width={22} height={22} loading="lazy" />)}
+          {project.extras.slice(0, 1).map(name => <span key={name}>{name}</span>)}</span>
+        <span className="card-open" aria-hidden="true">Detail <Plus size={16} /></span>
+      </div>
+    </div>
+    <button className="card-hit" onClick={() => { haptic(); onOpen(project.id); }} aria-haspopup="dialog" aria-label={`Lihat detail ${project.name}`} />
+  </article>;
 }
 
-function SectionTitle({ number, label, title, accent, light = false }: { number: string; label: string; title: string; accent: string; light?: boolean }) {
-  return <div className={`section-title ${light ? 'on-dark' : ''}`} data-reveal>
-    <div className="section-kicker"><span>{number}</span><span>{label}</span><span className="kicker-line" /></div>
-    <h2>{title}<br /><span>{accent}</span></h2>
-  </div>;
+function ToolTile({ tech, count, onPick }: { tech: (typeof technologies)[number]; count: number; onPick: (id: TechId) => void }) {
+  const tilt = useTilt<HTMLButtonElement>(14);
+  const content = <>
+    <span className="tool-logo"><img src={assetPath(`/assets/logos/${tech.id}.svg`)} alt="" width={30} height={30} loading="lazy" /></span>
+    <strong>{tech.name}</strong>
+    <span className="tool-group">{tech.group}</span>
+    <span className="tool-count">{tech.filterable ? `${count} proyek` : tech.caption}</span>
+  </>;
+  if (!tech.filterable) return <div className="tool-tile glass is-static">{content}</div>;
+  return <button ref={tilt} className="tool-tile glass tilt" onClick={() => { haptic(); onPick(tech.id); }} aria-label={`${tech.name}: lihat ${count} proyek`}>{content}</button>;
 }
 
-function ProjectArtwork({ id }: { id: string }) {
-  if (id === 'innerself') return <div className="project-art inner-art" aria-label="Alur InnerSelf: 32 jawaban dianalisis dengan TF-IDF dan Logistic Regression menjadi delapan fungsi kognitif.">
-    <div className="art-topbar"><span><Braces size={20} /> InnerSelf</span><span className="art-pill">COGNITIVE EXPLORER</span></div>
-    <div className="inner-model parallax-art">
-      <div className="question-block"><span className="tiny-label">IT STARTS WITH A QUESTION</span><strong>32<span>pertanyaan</span></strong><div className="answer-lines"><i /><i /><i /></div><span className="art-muted">Pilihan + alasan tertulis</span></div>
-      <div className="model-connector"><ArrowRight size={23} /></div>
-      <div className="model-block"><Cpu size={40} strokeWidth={1.4} /><strong>TF-IDF</strong><span>Logistic Regression</span><i className="model-pulse" /></div>
+function CertificateCard({ certificate, onOpen }: { certificate: (typeof certificates)[number]; onOpen: (id: string) => void }) {
+  const tilt = useTilt<HTMLElement>(8);
+  return <article ref={tilt} className={`cert-card glass tilt ${certificate.pending ? 'is-pending' : ''}`}>
+    <div className="cert-media">
+      {certificate.image
+        ? <Image src={certificate.image.src} alt={certificate.image.alt} width={certificate.image.width} height={certificate.image.height} sizes="(max-width: 700px) 80vw, 360px" />
+        : <BadgeCheck size={64} strokeWidth={1} aria-hidden="true" />}
     </div>
-    <div className="function-grid" aria-hidden="true">{['Ni', 'Ne', 'Si', 'Se', 'Ti', 'Te', 'Fi', 'Fe'].map((f, i) => <span key={f} style={{ '--i': i } as CSSProperties}>{f}<i /></span>)}</div>
-    <div className="art-footer"><span>8 fungsi kognitif</span><span>16 susunan fungsi <ArrowUpRight size={16} /></span></div>
-  </div>;
-
-  if (id === 'smart-trash') return <div className="project-art trash-art" aria-label="Alur Smart Trash: kamera, klasifikasi MobileNetV2, lalu ESP32 menggerakkan servo pemilah.">
-    <div className="art-topbar"><span><CircuitBoard size={20} /> SMART TRASH</span><span className="art-pill"><Radio size={13} /> IOT PROTOTYPE</span></div>
-    <h4>Lihat.<br />Kenali. <em>Pilah.</em></h4>
-    <div className="trash-flow parallax-art">
-      <div className="flow-node"><div><Camera size={32} strokeWidth={1.5} /></div><strong>Kamera</strong><span>OpenCV</span></div>
-      <span className="signal-path" aria-hidden="true"><i /></span>
-      <div className="flow-node"><div><Cpu size={32} strokeWidth={1.5} /></div><strong>Klasifikasi</strong><span>MobileNetV2</span></div>
-      <span className="signal-path" aria-hidden="true"><i /></span>
-      <div className="flow-node"><div><CircuitBoard size={32} strokeWidth={1.5} /></div><strong>Pemilahan</strong><span>ESP32 + servo</span></div>
-    </div>
-    <div className="trash-categories"><span><i /> Organik</span><span><i /> Nonorganik</span></div>
-    <div className="art-footer"><span>Vision → action</span><span>HTTP / Blynk IoT</span></div>
-  </div>;
-
-  if (id === 'face-recognition') return <div className="project-art face-art" aria-label="Absensi wajah: pemeriksaan kedipan, pengenalan identitas, dan pencatatan di server Flask dengan tiga client.">
-    <div className="art-topbar"><span><ScanFace size={20} /> FACE RECOGNITION</span><span className="art-pill">ATTENDANCE</span></div>
-    <div className="face-visual parallax-art"><div className="scan-frame"><ScanFace size={95} strokeWidth={.9} /><span className="scan-line" /><i /><i /><i /><i /></div>
-      <div className="scan-steps"><span><b>01</b> Periksa kedipan</span><span><b>02</b> Kenali identitas</span><span><b>03</b> Catat kehadiran</span></div>
-    </div>
-    <div className="server-label"><Network size={20} /><strong>Server pusat</strong><span>Flask + Socket.IO</span></div>
-    <div className="client-branches"><span><Camera size={18} /> Alat absensi</span><span><BookOpen size={18} /> Guru</span><span><GraduationCap size={18} /> Siswa</span></div>
-    <div className="art-footer"><span>One connected system</span><span>3 client <ArrowUpRight size={16} /></span></div>
-  </div>;
-
-  return <div className="project-art payroll-art" aria-label="Modul HR dan Payroll: karyawan, absensi, cuti, dan penggajian hingga slip gaji.">
-    <div className="art-topbar"><span><Wallet size={20} /> HR & PAYROLL</span><span className="art-pill">CODEIGNITER 4</span></div>
-    <div className="payroll-heading"><span className="tiny-label">CONNECTED ADMINISTRATION</span><h4>People. Process.<br /><em>Payroll.</em></h4></div>
-    <div className="payroll-modules parallax-art">{[[Users, 'Karyawan'], [CalendarDays, 'Absensi'], [BookOpen, 'Cuti'], [Wallet, 'Payroll']].map(([Icon, label]) => {
-      const ModuleIcon = Icon as typeof Users;
-      return <div key={label as string}><ModuleIcon size={24} strokeWidth={1.6} /><span>{label as string}</span><ArrowUpRight size={15} /></div>;
-    })}</div>
-    <div className="payroll-process"><span>Data karyawan</span><ArrowRight size={16} /><span>Proses payroll</span><ArrowRight size={16} /><span>Slip gaji</span></div>
-    <div className="art-footer"><span>From data to payslip</span><span>PHP / JavaScript</span></div>
-  </div>;
-}
-
-function ProjectCard({ project }: { project: Project }) {
-  return <article className={`project-card project-${project.id}`} id={project.id}>
-    <div className="project-art-column"><span className="project-depth-number" aria-hidden="true">{project.number}</span><div className="project-art-wrap"><ProjectArtwork id={project.id} /></div><span className="art-caption">GAMBARAN ALUR & MODUL PROYEK</span></div>
-    <div className="project-copy" data-reveal>
-      <div className="project-eyebrow"><span>{project.category}</span><span>/{project.number}</span></div>
-      <h3>{project.name}</h3><p className="project-subtitle">{project.subtitle}</p><p className="project-description">{project.description}</p>
-      <div className="project-technologies">{project.technologies.map(tech => <span key={tech.name}>{tech.logo && <img src={assetPath(`/assets/logos/${tech.logo}.svg`)} alt="" width={19} height={19} loading="lazy" />}{tech.name}</span>)}</div>
-      <details className="project-details"><summary>Detail implementasi <ChevronDown size={18} /></summary><ul>{project.highlights.map(point => <li key={point}><Check size={16} /><span>{point}</span></li>)}</ul></details>
-      <a href={project.repository} className="repository-link" target="_blank" rel="noopener noreferrer"><Github size={19} /> Jelajahi source code <ArrowUpRight size={19} /></a>
-      {project.note && <p className="project-note">{project.note}</p>}
-    </div>
+    <p className="cert-date">{certificate.date}</p>
+    <h3>{certificate.title}</h3>
+    <p className="cert-issuer">{certificate.issuer}</p>
+    {certificate.pending && <p className="cert-pending">{certificate.pending}</p>}
+    {certificate.image && <button className="card-hit" onClick={() => onOpen(certificate.id)} aria-haspopup="dialog" aria-label={`Perbesar sertifikat ${certificate.title}`} />}
   </article>;
 }
 
 export default function Portfolio() {
   const root = useRef<HTMLDivElement>(null);
-  const menuButton = useRef<HTMLButtonElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const segmentRef = useRef<HTMLDivElement>(null);
   const [motionPaused, setMotionPaused] = useState(false);
   const [systemReduced, setSystemReduced] = useState(false);
   const paused = motionPaused || systemReduced;
+  const { gyro, requestGyro } = useAmbientMotion(paused);
+  const lens = useTilt<HTMLElement>(10);
+
+  const [category, setCategory] = useState<Category | 'all'>('all');
+  const [tech, setTech] = useState<TechId | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [certId, setCertId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ key: number; text: string } | null>(null);
+  const [active, setActive] = useState('');
+  const [scanKey, setScanKey] = useState(0);
+
+  const visible = useMemo(() => projects.filter(p => (category === 'all' || p.tags.includes(category)) && (!tech || p.stack.includes(tech))), [category, tech]);
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -110,190 +108,333 @@ export default function Portfolio() {
   }, []);
 
   useEffect(() => {
-    if (!root.current) return;
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const notify = useCallback((text: string) => setToast({ key: Date.now(), text }), []);
+
+  const toggleMotion = useCallback(() => {
+    setMotionPaused(current => {
+      const next = !current;
+      try { sessionStorage.setItem('efriza-motion-paused', String(next)); } catch { /* Preference still works without storage. */ }
+      return next;
+    });
+  }, []);
+
+  const scrollToId = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: ambient.paused ? 'auto' : 'smooth', block: 'start' });
+  }, []);
+
+  // Animate the grid reflow when the filter changes (View Transitions where supported).
+  const withTransition = useCallback((update: () => void) => {
+    const doc = document as Document & { startViewTransition?: (callback: () => void) => unknown };
+    if (doc.startViewTransition && !ambient.paused) doc.startViewTransition(() => flushSync(update));
+    else update();
+  }, []);
+
+  const pickCategory = (id: Category | 'all') => { haptic(); withTransition(() => setCategory(id)); };
+  // When the grid is off screen, skip the transition: update, let ScrollTrigger re-measure, then scroll.
+  const filterAndReveal = useCallback((update: () => void) => {
+    flushSync(update);
+    requestAnimationFrame(() => requestAnimationFrame(() => { ScrollTrigger.refresh(); scrollToId('projects'); }));
+  }, [scrollToId]);
+  const pickTech = useCallback((id: TechId) => filterAndReveal(() => { setTech(id); setCategory('all'); }), [filterAndReveal]);
+
+  const copyEmail = useCallback(() => {
+    haptic(12);
+    navigator.clipboard?.writeText(profile.email).then(() => notify('Email disalin ke clipboard'), () => notify(`Salin manual: ${profile.email}`));
+  }, [notify]);
+
+  const terminalActions = useMemo(() => ({
+    openProject: (id: string) => setOpenId(id),
+    filterProjects: (id: Category | 'all') => { window.setTimeout(() => filterAndReveal(() => { setCategory(id); setTech(null); }), 350); },
+    copyEmail,
+    toggleMotion,
+    burst: () => burstField(window.innerWidth / 2, window.innerHeight * 0.45),
+  }), [copyEmail, filterAndReveal, toggleMotion]);
+
+  // Scroll spy for both navigations.
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) setActive(entry.target.id); });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    ['home', ...sections.map(s => s.id), 'contact'].forEach(id => { const el = document.getElementById(id); if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, []);
+
+  // Sliding glass indicators under the active nav link and filter.
+  useLayoutEffect(() => {
+    const place = (container: HTMLElement | null, selector: string) => {
+      if (!container) return;
+      const target = container.querySelector<HTMLElement>(selector);
+      container.style.setProperty('--ind-x', target ? `${target.offsetLeft}px` : '0px');
+      container.style.setProperty('--ind-w', target ? `${target.offsetWidth}px` : '0px');
+      container.style.setProperty('--ind-o', target ? '1' : '0');
+    };
+    const update = () => { place(navRef.current, '[aria-current="true"]'); place(segmentRef.current, '[aria-pressed="true"]'); };
+    update();
+    window.addEventListener('resize', update);
+    document.fonts?.ready.then(update);
+    return () => window.removeEventListener('resize', update);
+  }, [active, category]);
+
+  // Scroll-linked parallax. Pointer and gyroscope depth is handled in CSS.
+  useEffect(() => {
     const scope = root.current;
+    if (!scope) return;
     scope.classList.toggle('motion-paused', paused);
-    document.documentElement.classList.toggle('scroll-reduced', paused);
-    if (paused) return () => document.documentElement.classList.remove('scroll-reduced');
+    if (paused) return;
     gsap.registerPlugin(ScrollTrigger);
-    const mm = gsap.matchMedia();
-    let active = true;
-    mm.add({ desktop: '(min-width: 900px)', mobile: '(max-width: 899px)', short: '(max-height: 620px)', reduced: '(prefers-reduced-motion: reduce)' }, context => {
-      if (context.conditions?.reduced) return;
-      const desktop = Boolean(context.conditions?.desktop);
-      // CSS sticky holds the opening in the viewport. Native scrolling drives
-      // the timeline; there is no wheel/touch interception or mandatory snapping.
-      if (!context.conditions?.short) {
-        scope.classList.add('has-scroll-story');
-        const story = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: {
-          trigger: '.scroll-story',
-          start: () => `top ${scope.querySelector<HTMLElement>('.site-header')?.offsetHeight ?? 82}px`,
-          end: 'bottom bottom', scrub: .65, invalidateOnRefresh: true,
-        } });
-        story.to('.story-landscape', { scale: 1.28, yPercent: -7, duration: 1 }, 0)
-          .to('.story-foreground-left', { xPercent: desktop ? -30 : -39, yPercent: 23, scale: 1.45, duration: .66 }, 0)
-          .to('.story-foreground-right', { xPercent: desktop ? 30 : 39, yPercent: 23, scale: 1.45, duration: .66 }, 0)
-          .fromTo('.story-core', { scale: .7, y: 24, rotation: -9 }, { scale: 1.15, y: -14, rotation: 1, duration: .4 }, 0)
-          .to('.story-core', { scale: desktop ? 4.8 : 3.8, y: desktop ? -90 : -35, rotation: 9, duration: .34 }, .4)
-          .to('.story-core', { autoAlpha: 0, duration: .14 }, .65)
-          .to('.story-intro', { y: -60, autoAlpha: 0, duration: .14 }, .06)
-          .fromTo('.story-middle', { y: 35, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .12 }, .24)
-          .to('.story-middle', { y: -35, autoAlpha: 0, duration: .12 }, .5)
-          .to('.story-warmth', { opacity: 0, duration: .38 }, .25)
-          .to('.story-night', { opacity: .6, duration: .45 }, .4)
-          .to('.story-halo', { scale: 2.6, opacity: .75, duration: .35 }, .28)
-          .to('.story-halo', { scale: 3.7, opacity: 0, duration: .22 }, .63)
-          .to('.story-dusk', { opacity: .88, duration: .25 }, .66)
-          .fromTo('.story-outro', { y: 40, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: .17 }, .8)
-          .to('.story-phase-one', { autoAlpha: 0, duration: .05 }, .26)
-          .to('.story-phase-two', { autoAlpha: 1, duration: .05 }, .3)
-          .to('.story-phase-two', { autoAlpha: 0, duration: .05 }, .7)
-          .to('.story-phase-three', { autoAlpha: 1, duration: .05 }, .76)
-          .fromTo('.story-progress span', { scaleX: 0 }, { scaleX: 1, duration: 1 }, 0);
-      }
-      // Every layer follows the same native scroll position with its own depth.
-      // Scrubbing works in both directions without intercepting touch or wheel events.
-      const hero = gsap.timeline({ defaults: { ease: 'none', duration: 1 }, scrollTrigger: {
-        trigger: desktop ? '#intro' : '.hero-scene',
-        start: desktop ? 'top 82px' : 'top 80%', end: 'bottom top',
-        scrub: .8, invalidateOnRefresh: true,
-      } });
-      hero.to('.hero-grid', { y: desktop ? 180 : 65 }, 0)
-        .to('.hero-depth-word', { yPercent: 42, xPercent: -9, scale: 1.12 }, 0)
-        .to('.scene-outline', { y: desktop ? 115 : 35, rotation: -9, scale: .92 }, 0);
-      if (desktop) hero.to('.hero-copy', { y: 92 }, 0);
-      const spread = [20, -72, -38, 70, 35];
-      gsap.utils.toArray<HTMLElement>('[data-hero-depth]', scope).forEach((layer, index) => {
-        hero.to(layer, {
-          y: () => Number(layer.dataset.heroDepth) * window.innerHeight * (desktop ? 1.25 : .3),
-          x: (spread[index] ?? 0) * (desktop ? 1 : .23),
-          rotationY: desktop ? (index % 2 ? -12 : 10) : 0,
-          rotation: (index % 2 ? -6 : 5) * (desktop ? 1 : .4),
-          scale: index === 0 ? (desktop ? 1.09 : 1.025) : 1,
-          transformOrigin: '50% 65%',
-        }, 0);
+    const mm = gsap.matchMedia(scope);
+    mm.add({ desktop: '(min-width: 900px)', mobile: '(max-width: 899px)' }, context => {
+      const k = context.conditions?.desktop ? 1 : 0.5;
+      gsap.utils.toArray<HTMLElement>('[data-hero-layer]', scope).forEach(el => {
+        const speed = Number(el.dataset.heroLayer);
+        gsap.to(el, { y: () => speed * window.innerHeight * k, ease: 'none',
+          scrollTrigger: { trigger: '#home', start: 'top top', end: 'bottom top', scrub: 0.6, invalidateOnRefresh: true } });
       });
-      gsap.to('.scroll-ribbon-track', { xPercent: -17, ease: 'none', scrollTrigger: { trigger: '.scroll-ribbon', start: 'top bottom', end: 'bottom top', scrub: 1 } });
-      gsap.utils.toArray<HTMLElement>('.project-card', scope).forEach((card, index) => {
-        const art = card.querySelector('.project-art-wrap');
-        const number = card.querySelector('.project-depth-number');
-        const foreground = card.querySelector('.parallax-art');
-        const direction = index % 2 ? -1 : 1;
-        const scene = gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: {
-          trigger: card, start: 'top 94%', end: 'bottom 8%', scrub: .8, invalidateOnRefresh: true,
-        } });
-        scene.fromTo(art, {
-          y: desktop ? 92 : 32, rotationX: desktop ? 12 : 0,
-          rotationY: desktop ? -12 * direction : 0, rotation: desktop ? -3 * direction : -1 * direction,
-          scale: desktop ? .88 : .97,
-        }, { y: 0, rotationX: 0, rotationY: 0, rotation: 0, scale: 1, duration: .4 }, 0)
-          .to(art, { y: desktop ? -54 : -18, rotationX: desktop ? -5 : 0,
-            rotationY: desktop ? 5 * direction : 0, duration: .6 }, .4)
-          .fromTo(number, { y: desktop ? 110 : 30 }, { y: desktop ? -90 : -28, duration: 1 }, 0);
-        if (foreground) scene.fromTo(foreground, { y: desktop ? 19 : 8 }, { y: desktop ? -23 : -8, duration: 1 }, 0);
+      gsap.utils.toArray<HTMLElement>('[data-depth]', scope).forEach(el => {
+        const d = Number(el.dataset.depth) * k * 110;
+        gsap.fromTo(el, { y: d }, { y: -d, ease: 'none',
+          scrollTrigger: { trigger: el.closest('section') ?? el, start: 'top bottom', end: 'bottom top', scrub: 0.8 } });
       });
-      // The portrait and its caption travel independently, like the foreground
-      // and middle ground in the supplied reference video.
-      const about = gsap.timeline({ defaults: { ease: 'none', duration: 1 }, scrollTrigger: {
-        trigger: '.about-image-column', start: 'top 90%', end: 'bottom 10%', scrub: .8,
-      } });
-      about.fromTo('.about-photo', { y: desktop ? 65 : 24, rotation: -6 }, { y: desktop ? -45 : -18, rotation: 1 }, 0)
-        .fromTo('.education-note', { y: desktop ? 85 : 32, rotation: 7 }, { y: desktop ? -24 : -10, rotation: -2 }, 0)
-        .fromTo('.about-new-photo', { objectPosition: 'center 24%' }, { objectPosition: 'center 58%' }, 0);
-      gsap.utils.toArray<HTMLElement>('.technology-tile', scope).forEach((tile, index) => {
-        const depth = desktop ? [18, 38, 58][index % 3] : [8, 18][index % 2];
-        gsap.fromTo(tile, { y: depth }, { y: -depth, ease: 'none', scrollTrigger: {
-          trigger: '.technology-grid', start: 'top bottom', end: 'bottom top', scrub: 1,
-        } });
+      gsap.utils.toArray<HTMLElement>('.section-head h2', scope).forEach(heading => {
+        gsap.fromTo(heading, { '--sweep': '-40%' }, { '--sweep': '150%', ease: 'none',
+          scrollTrigger: { trigger: heading, start: 'top 92%', end: 'top 45%', scrub: 0.5 } });
       });
-      gsap.fromTo('.contact-heading', { y: desktop ? 65 : 24 }, { y: 0, ease: 'none', scrollTrigger: {
-        trigger: '#contact', start: 'top 90%', end: 'top 25%', scrub: .7,
-      } });
-      gsap.utils.toArray<HTMLElement>('.section-title h2', scope).forEach(heading => {
-        gsap.fromTo(heading, { y: desktop ? 30 : 12 }, { y: 0, ease: 'none', scrollTrigger: {
-          trigger: heading.closest('.section-title'), start: 'top bottom', end: 'top 55%', scrub: .6,
-        } });
-      });
-      gsap.utils.toArray<HTMLElement>('[data-reveal]:not(.contact-heading)', scope).forEach(item => {
-        gsap.from(item, { y: 32, opacity: 0, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: item, start: 'top 94%', once: true } });
-      });
-      return () => scope.classList.remove('has-scroll-story');
-    }, scope);
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => entry.target.classList.toggle('in-view', entry.isIntersecting)), { rootMargin: '80px' });
-    scope.querySelectorAll('.project-art, .logo-marquee, .hero-scene').forEach(item => observer.observe(item));
-    const refresh = () => ScrollTrigger.refresh();
-    const details = [...scope.querySelectorAll('details')];
-    details.forEach(item => item.addEventListener('toggle', refresh));
-    document.fonts.ready.then(() => { if (active) refresh(); });
-    return () => { active = false; observer.disconnect(); details.forEach(item => item.removeEventListener('toggle', refresh)); mm.revert(); document.documentElement.classList.remove('scroll-reduced'); };
+    });
+    let alive = true;
+    document.fonts?.ready.then(() => { if (alive) ScrollTrigger.refresh(); });
+    return () => { alive = false; mm.revert(); };
   }, [paused]);
 
   useEffect(() => {
-    if (!menuOpen) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuOpen(false); menuButton.current?.focus(); } };
-    const onResize = () => { if (window.innerWidth >= 900) setMenuOpen(false); };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('resize', onResize);
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
-  }, [menuOpen]);
+    const frame = requestAnimationFrame(() => ScrollTrigger.refresh());
+    return () => cancelAnimationFrame(frame);
+  }, [category, tech]);
 
-  const toggleMotion = () => {
-    const next = !motionPaused;
-    setMotionPaused(next);
-    try { sessionStorage.setItem('efriza-motion-paused', String(next)); } catch { /* Preference still works without storage. */ }
-  };
-  const motionLabel = systemReduced ? 'Animasi mengikuti pengaturan perangkat' : paused ? 'Aktifkan animasi' : 'Jeda animasi';
+  const openIndex = openId ? projects.findIndex(p => p.id === openId) : -1;
+  const navigateProject = useCallback((direction: 1 | -1) => {
+    setOpenId(current => {
+      const index = projects.findIndex(p => p.id === current);
+      return projects[(index + direction + projects.length) % projects.length].id;
+    });
+  }, []);
+  const certificate = certificates.find(c => c.id === certId);
+  const motionLabel = systemReduced ? 'Gerakan dikurangi sesuai pengaturan perangkat' : paused ? 'Aktifkan animasi' : 'Jeda animasi';
 
-  return <div ref={root} className={`portfolio-root ${paused ? 'motion-paused' : ''}`}>
+  return <div ref={root} className={`site ${paused ? 'motion-paused' : ''}`}>
+    <BackgroundField paused={paused} />
     <a className="skip-link" href="#main">Langsung ke konten</a>
-    <header className="site-header"><div className="container-main header-inner">
-      <a href="#home" className="brand" aria-label="Efriza, kembali ke awal"><span className="brand-mark">e<span>.</span></span><span>efriza<span className="brand-dot">.</span></span></a>
-      <nav aria-label="Navigasi utama" className="desktop-navigation">{navigation.map(([label, href]) => <a key={href} href={href}>{label}</a>)}</nav>
-      <div className="header-actions"><button className="motion-button" onClick={toggleMotion} aria-label={motionLabel} title={motionLabel} aria-pressed={paused} disabled={systemReduced}>{paused ? <Play size={16} /> : <Pause size={16} />}</button><a href="#contact" className="header-contact">Mari terhubung <ArrowUpRight size={17} /></a><button ref={menuButton} className="menu-button" aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'} aria-expanded={menuOpen} aria-controls="mobile-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={23} /> : <Menu size={23} />}</button></div>
-    </div><nav id="mobile-navigation" className="mobile-navigation" aria-label="Navigasi seluler" hidden={!menuOpen}>{[...navigation, ['Mari terhubung', '#contact']].map(([label, href]) => <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}<ArrowUpRight size={17} /></a>)}</nav></header>
+
+    <header className="site-header">
+      <div className="header-pill glass">
+        <a href="#home" className="brand" aria-label="Efriza, kembali ke awal"><span className="brand-mark">e.</span><span className="brand-name">efriza</span></a>
+        <nav ref={navRef} className="desktop-nav" aria-label="Navigasi utama">
+          <span className="nav-indicator" aria-hidden="true" />
+          {sections.map(s => <a key={s.id} href={`#${s.id}`} aria-current={active === s.id ? 'true' : undefined}>{s.label}</a>)}
+        </nav>
+        <div className="header-actions">
+          <button className="icon-button" onClick={toggleMotion} aria-label={motionLabel} title={motionLabel} aria-pressed={paused} disabled={systemReduced}>{paused ? <Play size={16} /> : <Pause size={16} />}</button>
+          <a className="btn btn-solid btn-small header-cta" href="#contact">Hubungi saya</a>
+          <a className="btn btn-glass btn-small header-cv" href={profile.cv} download>CV <FileDown size={15} /></a>
+        </div>
+      </div>
+    </header>
+
+    <nav className="mobile-dock glass" aria-label="Navigasi bagian">
+      {[...sections.filter(s => s.id !== 'journey'), { id: 'contact', label: 'Kontak', icon: Mail }].map(s => {
+        const Icon = s.icon;
+        return <a key={s.id} href={`#${s.id}`} aria-current={active === s.id ? 'true' : undefined} onClick={() => haptic()}><Icon size={20} strokeWidth={1.8} /><span>{s.label}</span></a>;
+      })}
+    </nav>
 
     <main id="main">
-      <ScrollStory />
-      <section id="intro" className="hero-section"><div className="hero-grid" aria-hidden="true" /><div className="hero-depth-word" aria-hidden="true">BUILD</div><div className="container-main hero-layout">
-        <div className="hero-copy"><div className="hero-eyebrow"><i /> TERBUKA UNTUK MAGANG IT</div><h2 className="intro-heading">Dari ide<br /><span>menjadi</span><br />sistem<span className="hero-period">.</span></h2><p className="hero-name">Efriza Taufiqurrohman</p><p className="hero-description">Saya menghubungkan software, machine learning, dan perangkat untuk membangun sesuatu yang bisa digunakan.</p>
-          <div className="hero-buttons"><a className="button-primary" href="#projects">Jelajahi proyek <ArrowDown size={18} /></a><a className="button-secondary" href={cv} download>Unduh CV <FileDown size={18} /></a></div><div className="hero-facts"><span><GraduationCap size={17} /> Mahasiswa Informatika · UBSI</span><span><MapPin size={16} /> Kab. Bekasi, Jawa Barat</span></div>
+      <section id="home" className="hero" data-ambient>
+        <div className="wrap hero-grid">
+          <p className="status-pill glass" data-hero-layer="0.05"><span className="pulse-dot" aria-hidden="true" />Terbuka untuk magang IT</p>
+          <h1 className="hero-title" data-hero-layer="0.22" aria-label="Dari ide menjadi sistem.">
+            {['Dari ide', 'menjadi', 'sistem.'].map((text, i) => <span className="line" key={text} aria-hidden="true"><span style={{ '--i': i } as CSSProperties}>{text}</span></span>)}
+          </h1>
+
+          <div className="hero-stage" data-hero-layer="-0.12">
+            <div className="lens-enter">
+              <figure ref={lens} className="hero-lens glass tilt ambient-tilt" onPointerDown={() => setScanKey(k => k + 1)}>
+                <div className="lens-photo">
+                  <Image src={assetPath('/assets/efriza-hero.webp')} alt="Potret Efriza Taufiqurrohman di depan gedung BNI pada malam hari" width={1152} height={1536} priority sizes="(max-width: 899px) 60vw, 360px" />
+                  <div className="face-box" key={scanKey} style={scanKey ? { '--fd': '0s' } as CSSProperties : undefined} aria-hidden="true"><i /><i /><i /><i /><span>Efriza, terdeteksi</span></div>
+                </div>
+                <figcaption><strong>{profile.name}</strong><span>Mahasiswa Informatika, UBSI</span></figcaption>
+              </figure>
+            </div>
+            <span className="hero-chip glass chip-a" style={depth(34)} aria-hidden="true"><img src={assetPath('/assets/logos/python.svg')} alt="" width={22} height={22} />Python</span>
+            <span className="hero-chip glass chip-b" style={depth(52)} aria-hidden="true"><img src={assetPath('/assets/logos/tensorflow.svg')} alt="" width={22} height={22} />TensorFlow</span>
+            <span className="hero-chip glass chip-c" style={depth(24)} aria-hidden="true"><CircuitBoard size={20} strokeWidth={1.6} />ESP32</span>
+          </div>
+
+          <div className="hero-copy" data-hero-layer="0.1">
+            <p className="hero-lead">Saya {profile.shortName}. Saya menghubungkan software, machine learning, dan perangkat untuk membangun sesuatu yang bisa digunakan.</p>
+            <div className="hero-actions">
+              <a className="btn btn-solid" href="#projects">Lihat proyek <ArrowDown size={18} /></a>
+              <a className="btn btn-glass" href={profile.cv} download>Unduh CV <FileDown size={18} /></a>
+            </div>
+            {gyro === 'needs-permission' && <button className="gyro-button" onClick={requestGyro}><Smartphone size={16} />Aktifkan efek gerak ponsel</button>}
+          </div>
+
+          <ul className="hero-facts" data-hero-layer="0.04">
+            <li><GraduationCap size={17} />Informatika, {profile.campus}</li>
+            <li><MapPin size={16} />{profile.location}</li>
+            <li><a href={profile.github} target="_blank" rel="noopener noreferrer"><Github size={16} />7 proyek di GitHub<ArrowUpRight size={14} /></a></li>
+          </ul>
         </div>
-        <div className="hero-scene"><div className="scene-outline" aria-hidden="true" /><div className="scene-coordinates">SOFTWARE × INTELLIGENT SYSTEMS</div>
-          <div className="portrait-layer" data-hero-depth="-0.18"><div className="portrait-card"><span className="portrait-index">ET / 2026 <span>01</span></span><Image className="hero-photo" src={assetPath('/assets/efriza-hero.webp')} alt="Potret Efriza Taufiqurrohman di depan gedung BNI" width={1152} height={1536} sizes="(max-width: 599px) 254px, (max-width: 1199px) 270px, 306px" /><div className="portrait-caption"><strong>Efriza T.</strong><span>DEVELOPER IN THE MAKING <ArrowUpRight size={17} /></span></div></div></div>
-          <div className="floating-layer python-layer" data-hero-depth="-0.28"><div className="floating-card python-card"><TechLogo name="Python" logo="python" /><div><strong>Python</strong><span>BUILD THE LOGIC</span></div><Code2 size={20} /></div></div>
-          <div className="floating-layer ml-layer" data-hero-depth="-0.12"><div className="floating-card ml-card"><TechLogo name="TensorFlow" logo="tensorflow" /><div><strong>Machine Learning</strong><span>TRAIN. EVALUATE. ITERATE.</span></div></div></div>
-          <div className="floating-layer iot-layer" data-hero-depth="-0.36"><div className="floating-card iot-card"><CircuitBoard size={35} strokeWidth={1.4} /><strong>ESP32<br />& IoT</strong><span>CODE MEETS HARDWARE</span></div></div>
-          <div className="code-layer" data-hero-depth="-0.08"><div className="code-fragment"><div><Terminal size={15} /><span>the way I build</span><i /></div><p><span>idea</span> → prototype<br /><span>learn</span> → iterate</p></div></div>
-          <div className="scene-bottom">CURIOUS MIND. HANDS-ON APPROACH.<span>✳</span></div>
+      </section>
+
+      <section id="projects" className="section" data-ambient>
+        <div className="wrap">
+          <header className="section-head">
+            <h2>Proyek pilihan</h2>
+            <p>Eksperimen yang tumbuh menjadi aplikasi, model, dan perangkat. Saring berdasarkan bidang, lalu buka kartu untuk melihat cara kerjanya.</p>
+          </header>
+          <div className="filter-row">
+            <div ref={segmentRef} className="segmented glass" role="group" aria-label="Saring proyek berdasarkan bidang">
+              <span className="segment-indicator" aria-hidden="true" />
+              {categories.map(c => {
+                const count = c.id === 'all' ? projects.length : projects.filter(p => p.tags.includes(c.id as Category)).length;
+                return <button key={c.id} aria-pressed={category === c.id} onClick={() => pickCategory(c.id)}>{c.label}<span>{count}</span></button>;
+              })}
+            </div>
+            {tech && <button className="tech-filter" onClick={() => withTransition(() => setTech(null))} aria-label={`Hapus saringan ${techName(tech)}`}>
+              <img src={assetPath(`/assets/logos/${tech}.svg`)} alt="" width={18} height={18} />Memakai {techName(tech)}<X size={16} /></button>}
+          </div>
+          <p className="sr-only" aria-live="polite">{visible.length} proyek ditampilkan</p>
+          <div className="project-grid">
+            {visible.map(project => <ProjectCard key={project.id} project={project} onOpen={setOpenId} />)}
+            {visible.length === 0 && <div className="empty-state glass">
+              <p>Belum ada proyek {categories.find(c => c.id === category)?.label} yang memakai {tech ? techName(tech) : 'teknologi ini'}.</p>
+              <button className="btn btn-glass" onClick={() => withTransition(() => { setCategory('all'); setTech(null); })}>Tampilkan semua proyek</button>
+            </div>}
+          </div>
+          <a className="more-link" href={profile.github} target="_blank" rel="noopener noreferrer"><Github size={18} />Semua repositori di GitHub<ArrowUpRight size={16} /></a>
         </div>
-      </div><div className="container-main hero-bottom"><a href={github} target="_blank" rel="noopener noreferrer"><Github size={18} /><span>7 proyek yang bisa dijelajahi</span><ArrowUpRight size={16} /></a><a href="#projects" className="scroll-cue">SCROLL TO EXPLORE <ArrowDown size={15} /></a></div></section>
+      </section>
 
-      <div className="scroll-ribbon" aria-hidden="true"><div className="scroll-ribbon-track">{[0, 1, 2].map(i => <span key={i}>SOFTWARE <b>✳</b> MACHINE LEARNING <b>✳</b> COMPUTER VISION <b>✳</b> INTERNET OF THINGS <b>✳</b> </span>)}</div></div>
+      <section id="terminal" className="section terminal-section" data-ambient>
+        <div className="wrap terminal-layout">
+          <header className="section-head">
+            <h2>Lebih suka mengetik?</h2>
+            <p>Jelajahi portofolio ini lewat terminal kecil. Ketik <code>proyek</code>, <code>buka 2</code>, atau <code>filter cv</code>. Di ponsel, ketuk perintah di bawah terminal.</p>
+          </header>
+          <div className="terminal-frame" data-depth="0.12"><MiniTerminal actions={terminalActions} /></div>
+        </div>
+      </section>
 
-      <section id="projects" className="projects-section section-space"><div className="container-main"><div className="section-intro"><SectionTitle number="01" label="SELECTED WORK" title="Dari eksplorasi." accent="Menjadi implementasi." /><p data-reveal>Eksperimen yang tumbuh menjadi aplikasi, model, dan perangkat. Berikut cara saya menerjemahkan rasa ingin tahu menjadi karya.</p></div>
-        <div className="featured-projects">{featuredProjects.map(project => <ProjectCard key={project.id} project={project} />)}</div>
-        <div className="more-projects-heading" data-reveal><h3>Eksperimen lainnya<span> (03)</span></h3><a href={github} target="_blank" rel="noopener noreferrer">Semua repository <ArrowUpRight size={17} /></a></div>
-        <div className="other-projects">{otherProjects.map((project, i) => { const Icon = [Laptop, Hand, Calculator][i]; return <a href={project.repository} className={`other-project other-${project.id}`} key={project.id} target="_blank" rel="noopener noreferrer" data-reveal><div className="other-project-top"><span className="other-project-icon"><Icon size={32} strokeWidth={1.4} /></span><span>/{project.number}</span><ArrowUpRight className="other-arrow" size={25} /></div><span className="tiny-label">{project.kind}</span><h4>{project.name}</h4><p>{project.description}</p><span className="other-tech">{project.tech}</span></a>; })}</div>
-      </div></section>
+      <section id="toolkit" className="section" data-ambient>
+        <div className="wrap">
+          <header className="section-head">
+            <h2>Alat yang saya pakai</h2>
+            <p>Dari melatih model, merancang API, hingga menghubungkan perangkat. Ketuk sebuah teknologi untuk melihat proyek yang memakainya.</p>
+          </header>
+          <div className="tool-grid">
+            {technologies.map((t, i) => <div className="tool-cell" key={t.id} data-depth={[0.05, 0.22, 0.12, 0.3][i % 4]}>
+              <ToolTile tech={t} count={projectsUsing(t.id).length} onPick={pickTech} />
+            </div>)}
+          </div>
+        </div>
+      </section>
 
-      <section id="toolkit" className="toolkit-section section-space"><div className="container-main toolkit-layout"><div><SectionTitle number="02" label="MY TOOLKIT" title="Beragam teknologi." accent="Satu rasa ingin tahu." light /><p className="toolkit-description" data-reveal>Dari melatih model, merancang API, hingga menghubungkan perangkat. Saya memilih alat yang sesuai dengan masalahnya, lalu belajar sambil membangun.</p><div className="toolkit-note" data-reveal><Braces size={23} /><span>Selalu ada hal baru<br /><strong>untuk dipelajari.</strong></span><ArrowUpRight size={24} /></div></div>
-        <div className="technology-grid" data-reveal>{technologies.map(tech => <div className="technology-tile" key={tech.name}><TechLogo name={tech.name} logo={tech.logo} /><strong>{tech.name}</strong><span>{tech.group}</span></div>)}</div>
-      </div><div className="logo-marquee" aria-label="Teknologi: Python, TensorFlow, OpenCV, scikit-learn, FastAPI, Flask, Flutter, PHP, JavaScript"><div className="logo-marquee-track">{[0, 1].map(copy => <div className="logo-marquee-set" key={copy} aria-hidden="true">{technologies.slice(0, 9).map(tech => <span key={tech.name}><img src={assetPath(`/assets/logos/${tech.logo}.svg`)} alt="" width={28} height={28} loading="lazy" />{tech.name}<i>✳</i></span>)}</div>)}</div></div></section>
+      <section id="about" className="section" data-ambient>
+        <div className="wrap about-layout">
+          <div className="about-visual">
+            <figure className="about-frame glass" data-depth="0.12">
+              <Image src={assetPath('/assets/efriza-about.webp')} alt="Potret studio Efriza Taufiqurrohman" width={1024} height={1536} sizes="(max-width: 899px) 78vw, 400px" />
+            </figure>
+            <div className="about-badge glass" data-depth="0.4" style={depth(30)}><GraduationCap size={22} /><span><strong>{profile.semester}</strong>{profile.degree}</span></div>
+            <div className="about-chip glass" data-depth="0.6" style={depth(46)}><MapPin size={16} />Bekasi, Indonesia</div>
+          </div>
+          <div className="about-copy">
+            <header className="section-head">
+              <h2>Halo, saya Efriza.</h2>
+            </header>
+            <p>Saya mahasiswa Informatika di {profile.campus}, dengan ketertarikan pada pengembangan aplikasi, machine learning, computer vision, dan IoT.</p>
+            <p>Bagi saya, belajar menjadi lebih menarik ketika sebuah konsep bisa dicoba langsung. Dari gestur tangan yang membuka website sampai kamera yang menggerakkan pemilah sampah, setiap proyek menjadi kesempatan untuk memahami sistem lebih jauh.</p>
+            <div className="focus-card glass"><BriefcaseBusiness size={24} /><div><strong>Mencari kesempatan magang IT</strong><span>Siap belajar bersama tim dan berkontribusi melalui proyek nyata.</span></div></div>
+            <a className="text-link" href={profile.portfolioPdf} download>Unduh portofolio lengkap (PDF) <FileDown size={18} /></a>
+          </div>
+        </div>
+      </section>
 
-      <section id="about" className="about-section section-space"><div className="container-main about-layout"><div className="about-image-column"><div className="about-photo"><Image className="about-new-photo" src={assetPath('/assets/efriza-about.webp')} alt="Potret studio Efriza Taufiqurrohman" width={1024} height={1536} sizes="(max-width: 599px) 80vw, 370px" /><span>BEKASI, INDONESIA<br />6° S · 107° E</span></div><div className="education-note"><GraduationCap size={27} /><span>INFORMATIKA · S1<strong>Semester 7</strong><span>Universitas Bina Sarana Informatika</span></span><i>✳</i></div></div>
-        <div className="about-copy"><SectionTitle number="03" label="A LITTLE ABOUT ME" title="Halo, saya Efriza." accent="Senang membuat hal bekerja." /><p data-reveal>Saya mahasiswa Informatika di Universitas Bina Sarana Informatika, dengan ketertarikan pada pengembangan aplikasi, machine learning, computer vision, dan IoT.</p><p data-reveal>Bagi saya, belajar menjadi lebih menarik ketika sebuah konsep bisa dicoba langsung. Dari gestur tangan yang membuka website sampai kamera yang menggerakkan pemilah sampah, setiap proyek menjadi kesempatan untuk memahami sistem lebih jauh.</p><div className="about-focus" data-reveal><BriefcaseBusiness size={23} /><div><strong>Mencari kesempatan magang IT</strong><span>Siap belajar bersama tim dan berkontribusi melalui proyek nyata.</span></div></div><a className="text-link" href={assetPath('/documents/Portfolio-Efriza-Taufiqurrohman.pdf')} download data-reveal>Lihat portofolio lengkap <FileDown size={19} /></a></div>
-      </div></section>
+      <section id="journey" className="section" data-ambient>
+        <div className="wrap">
+          <header className="section-head">
+            <h2>Perjalanan sejauh ini</h2>
+            <p>Pengalaman kerja membentuk cara saya bekerja dalam tim. Kuliah memperluas apa yang bisa saya bangun.</p>
+          </header>
+          <div className="journey-layout">
+            <article className="edu-card glass">
+              <GraduationCap size={30} strokeWidth={1.5} />
+              <p className="edu-period">2023 sampai sekarang</p>
+              <h3>{profile.campus}</h3>
+              <p>{profile.degree}</p>
+              <span className="edu-tag">Mahasiswa {profile.semester.toLowerCase()}</span>
+            </article>
+            <ol className="timeline">
+              {experience.map(item => <li key={item.role} className="glass">
+                <time>{item.period}</time>
+                <h3>{item.role}</h3>
+                <p className="timeline-company">{item.company}</p>
+                <p>{item.description}</p>
+              </li>)}
+            </ol>
+          </div>
+          <h3 className="sub-head"><Award size={24} />Pelatihan dan sertifikasi</h3>
+          <div className="cert-grid">{certificates.map(c => <CertificateCard key={c.id} certificate={c} onOpen={setCertId} />)}</div>
+        </div>
+      </section>
 
-      <section id="journey" className="journey-section section-space"><div className="container-main"><SectionTitle number="04" label="THE JOURNEY SO FAR" title="Pengalaman membentuk cara kerja." accent="Belajar memperluas kemungkinan." /><div className="journey-layout"><div className="education-card" data-reveal><div><GraduationCap size={29} /><span>2023 — SEKARANG</span></div><span className="tiny-label">PENDIDIKAN</span><h3>Universitas Bina<br />Sarana Informatika</h3><p>S1 Informatika (Ilmu Komputer)</p><span className="education-tag">Mahasiswa semester 7</span><span className="education-decoration" aria-hidden="true">✳</span></div><div className="experience-list" data-reveal>{[
-        { period: 'JUN 2023 — OKT 2023', role: 'Store Assistant', company: 'Pet Shop', description: 'Mendukung operasional harian toko selama lima bulan.' },
-        { period: 'NOV 2022 — MEI 2023', role: 'Warehouse Loading Crew', company: 'PT Prakarsa Alam Segar · Daily Worker', description: 'Mendukung aktivitas pemuatan barang dan operasional gudang.' },
-        { period: 'SEP 2021 — SEP 2022', role: 'Production Operator', company: 'PT Abdi Putra Pratama', description: 'Bekerja dalam alur produksi dan koordinasi operasional tim.' },
-      ].map(item => <article key={item.role}><span className="timeline-point" /><time>{item.period}</time><div><h3>{item.role}</h3><strong>{item.company}</strong><p>{item.description}</p></div></article>)}</div></div>
-      <div className="certificates-heading" data-reveal><h3>Pelatihan & sertifikasi</h3><Award size={26} /></div><div className="certificates-grid"><a className="certificate-card" href={assetPath('/assets/mtcna-certificate.webp')} target="_blank" rel="noopener noreferrer" data-reveal><div className="certificate-image"><Image src={assetPath('/assets/mtcna-certificate.webp')} alt="Sertifikat MikroTik Certified Network Associate milik Efriza" width={491} height={694} sizes="(max-width: 599px) 85vw, 350px" /></div><span className="certificate-date">JANUARI 2026 <ArrowUpRight size={17} /></span><h4>MikroTik Certified<br />Network Associate</h4><p>MTCNA · Credential 2601NA3035</p></a><a className="certificate-card" href={assetPath('/assets/iot-certificate.webp')} target="_blank" rel="noopener noreferrer" data-reveal><div className="certificate-image"><Image src={assetPath('/assets/iot-certificate.webp')} alt="Sertifikat bootcamp IoT dan AI Universitas Bina Sarana Informatika" width={891} height={630} sizes="(max-width: 599px) 85vw, 350px" /></div><span className="certificate-date">JULI 2025 <ArrowUpRight size={17} /></span><h4>Bootcamp<br />IoT & Artificial Intelligence</h4><p>Universitas Bina Sarana Informatika</p></a><div className="certificate-card pending-certificate" data-reveal><div className="certificate-pending-art"><BadgeCheck size={70} strokeWidth={.9} /><span>PROFESSIONAL DEVELOPMENT</span></div><span className="certificate-date">SERTIFIKASI PROFESI</span><h4>Analis Program</h4><p>BNSP</p><span className="pending-label">Menunggu penerbitan sertifikat</span></div></div>
-      </div></section>
-
-      <section id="contact" className="contact-section"><div className="container-main contact-inner"><div className="contact-topline"><span><i /> TERBUKA UNTUK KESEMPATAN BARU</span><span>LET’S MAKE SOMETHING WORK</span></div><div className="contact-heading" data-reveal><h2>Punya ruang untuk<br /><span>belajar & berkarya?</span></h2><a className="contact-circle" href="mailto:efrizataufiq@gmail.com" aria-label="Kirim email ke Efriza"><ArrowUpRight size={57} strokeWidth={1.1} /></a></div><p data-reveal>Saya siap membicarakan kesempatan magang, kolaborasi,<br className="desktop-break" /> atau ide proyek yang menarik. Mari mulai percakapan.</p><a className="contact-email" href="mailto:efrizataufiq@gmail.com" data-reveal>efrizataufiq@gmail.com <ArrowUpRight size={23} /></a><div className="contact-channels"><a href="mailto:efrizataufiq@gmail.com"><Mail size={19} /> Email <ArrowUpRight size={18} /></a><a href={github} target="_blank" rel="noopener noreferrer"><Github size={19} /> GitHub <ArrowUpRight size={18} /></a><a href="https://www.linkedin.com/in/efriza-taufiqurrohman-07b31221b" target="_blank" rel="noopener noreferrer"><Linkedin size={19} /> LinkedIn <ArrowUpRight size={18} /></a><a href="https://wa.me/6281456081822" target="_blank" rel="noopener noreferrer"><Hand size={19} /> WhatsApp <ArrowUpRight size={18} /></a></div></div></section>
+      <section id="contact" className="section contact-section" data-ambient>
+        <div className="wrap">
+          <div className="contact-panel glass">
+            <p className="status-pill"><span className="pulse-dot" aria-hidden="true" />Terbuka untuk kesempatan baru</p>
+            <h2>Punya ruang untuk belajar dan berkarya?</h2>
+            <p className="contact-lead">Saya siap membicarakan kesempatan magang, kolaborasi, atau ide proyek yang menarik.</p>
+            <div className="email-row">
+              <a className="email-link" href={`mailto:${profile.email}`}>{profile.email}</a>
+              <button className="btn btn-glass" onClick={copyEmail}><Copy size={17} />Salin email</button>
+            </div>
+            <div className="channels">
+              <a className="btn btn-solid" href={`mailto:${profile.email}`}><Mail size={18} />Kirim email</a>
+              <a className="btn btn-glass" href={profile.linkedin} target="_blank" rel="noopener noreferrer"><Linkedin size={18} />LinkedIn<ArrowUpRight size={15} /></a>
+              <a className="btn btn-glass" href={profile.github} target="_blank" rel="noopener noreferrer"><Github size={18} />GitHub<ArrowUpRight size={15} /></a>
+              <a className="btn btn-glass" href={profile.whatsapp} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} />WhatsApp<ArrowUpRight size={15} /></a>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
-    <footer className="site-footer"><div className="container-main footer-main"><a href="#home" className="brand"><span className="brand-mark">e<span>.</span></span><span>efriza.</span></a><p>© {new Date().getFullYear()} Efriza Taufiqurrohman</p><a href="#home" className="back-top">Kembali ke atas <ArrowUpRight size={18} /></a></div><div className="container-main footer-bottom"><span className="built-with">Dibangun dengan <img src={assetPath('/assets/logos/nextjs.svg')} alt="" width={18} height={18} /> Next.js <span>+</span><img src={assetPath('/assets/logos/tailwindcss.svg')} alt="" width={20} height={18} /> Tailwind CSS</span><button onClick={toggleMotion} aria-pressed={paused} disabled={systemReduced} title={motionLabel}>{paused ? <Play size={14} /> : <Pause size={14} />}{systemReduced ? 'Gerakan dikurangi sesuai perangkat' : paused ? 'Aktifkan animasi' : 'Jeda animasi'}</button></div></footer>
+
+    <footer className="site-footer">
+      <div className="wrap footer-inner">
+        <p>© {new Date().getFullYear()} {profile.name}</p>
+        <p className="built-with">Dibangun dengan Next.js, Tailwind CSS, dan GSAP</p>
+        <button className="footer-motion" onClick={toggleMotion} aria-pressed={paused} disabled={systemReduced}>{paused ? <Play size={14} /> : <Pause size={14} />}{motionLabel}</button>
+      </div>
+    </footer>
+
+    <div className="toast-region" aria-live="polite">{toast && <p key={toast.key} className="toast glass">{toast.text}</p>}</div>
+
+    <GlassDialog open={openIndex >= 0} onClose={() => setOpenId(null)} labelledBy="project-dialog-title">
+      {openIndex >= 0 && <ProjectDetail project={projects[openIndex]} index={openIndex} total={projects.length}
+        previous={projects[(openIndex - 1 + projects.length) % projects.length]} next={projects[(openIndex + 1) % projects.length]} onNavigate={navigateProject} />}
+    </GlassDialog>
+
+    <GlassDialog open={Boolean(certificate)} onClose={() => setCertId(null)} labelledBy="cert-dialog-title" size="narrow">
+      {certificate?.image && <div className="cert-viewer">
+        <Image src={certificate.image.src} alt={certificate.image.alt} width={certificate.image.width} height={certificate.image.height} sizes="(max-width: 700px) 92vw, 640px" />
+        <h2 id="cert-dialog-title">{certificate.title}</h2>
+        <p>{certificate.issuer}, {certificate.date}</p>
+      </div>}
+    </GlassDialog>
   </div>;
 }
