@@ -11,6 +11,7 @@ Light pastel glassmorphism on a "milk glass" field (`#f2f3fa`), with deep indigo
 - **Glass**: frosted panels (`backdrop-filter`) over a drifting pastel aurora and a particle canvas, so every panel has colour behind it to refract.
 - **Hero**: a staggered display headline (Bricolage Grotesque) with a glass portrait card. A face-detection frame locks onto the portrait as a nod to the face-recognition project. Tap or click the card to re-run the scan.
 - **Motion graphics**: every project card has an animated SVG diagram of how the project works (TF-IDF to eight functions, camera to ESP32 to servo, blink check to three clients, modules to payslip, a binary-tree search, a gesture opening a site, a timed math round). Diagrams only animate while on screen.
+- **Opening (first visit, about 5 s)**: a glass search bar types "Efriza Taufiqurrohman", suggestions drop in, Enter is pressed, results fly in on a tilted plane, the top result is clicked and the camera dives through it into the hero. Each shot changes the camera angle (CSS 3D + GSAP). It plays once per browser tab, never with reduced motion, a paused-motion preference or a deep link (`#projects`), and can be skipped with **Lewati** or Esc. A script in `<head>` decides before first paint, so there is no flash; `components/opening.tsx` holds the storyboard. The search bar is drawn in the site's own glass style, not as any real search engine's interface.
 - **Scroll choreography** (GSAP ScrollTrigger, scrubbed so it plays forwards and backwards with the scroll):
   - Hero is pinned on desktop and comes apart: the three headline lines slide in opposite directions, the photo card leans in, the chips scatter.
   - A tilted glass band of skills and logos slides in two directions; scrolling faster skews it.
@@ -76,6 +77,7 @@ Next.js performs a static export to `out/`. Serve that directory over HTTP (not 
 | `components/background-field.tsx` | Aurora and particle canvas |
 | `components/use-ambient-motion.ts`, `components/use-tilt.ts` | Pointer, touch and gyroscope motion |
 | `components/glass-dialog.tsx`, `components/project-detail.tsx` | Dialog / bottom sheet and project detail |
+| `components/opening.tsx`, `app/layout.tsx` | First-visit opening and the head script that decides whether it plays |
 | `app/globals.css` | Design tokens, glass, layouts, diagram animations, responsive rules |
 | `public/assets/`, `public/documents/` | Photos, certificates, technology logos, CV and portfolio PDFs |
 | `REPOSITORY-NOTES.md` | Project evidence, limitations and asset provenance |

@@ -17,6 +17,7 @@ import { certificates, experience, profile } from '@/lib/profile';
 import BackgroundField from '@/components/background-field';
 import GlassDialog from '@/components/glass-dialog';
 import MiniTerminal from '@/components/mini-terminal';
+import Opening from '@/components/opening';
 import ProjectDetail from '@/components/project-detail';
 import ProjectVisual from '@/components/project-visual';
 import { useAmbientMotion } from '@/components/use-ambient-motion';
@@ -378,6 +379,7 @@ export default function Portfolio() {
 
   return <div ref={root} className={`site ${paused ? 'motion-paused' : ''}`}>
     <BackgroundField paused={paused} />
+    <Opening />
     <a className="skip-link" href="#main">Langsung ke konten</a>
 
     <header className="site-header">

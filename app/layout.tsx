@@ -14,6 +14,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: '#f2f3fa', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
+// Decides before first paint whether the opening plays: once per tab session, never with reduced
+// motion, a paused-motion preference or a deep link. A timeout unlocks the page if the app fails to start.
+const introScript = `try{var d=document.documentElement,s=sessionStorage;if(!s.getItem('efriza-intro-seen')&&s.getItem('efriza-motion-paused')!=='true'&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!location.hash){d.classList.add('intro-pending');if('scrollRestoration' in history)history.scrollRestoration='manual';window.__introFailsafe=setTimeout(function(){d.classList.remove('intro-pending')},9000)}}catch(e){}`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="id"><body>{children}</body></html>;
+  return <html lang="id" suppressHydrationWarning>
+    <head><script dangerouslySetInnerHTML={{ __html: introScript }} /></head>
+    <body>{children}</body>
+  </html>;
 }
