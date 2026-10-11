@@ -11,7 +11,15 @@ Light pastel glassmorphism on a "milk glass" field (`#f2f3fa`), with deep indigo
 - **Glass**: frosted panels (`backdrop-filter`) over a drifting pastel aurora and a particle canvas, so every panel has colour behind it to refract.
 - **Hero**: a staggered display headline (Bricolage Grotesque) with a glass portrait card. A face-detection frame locks onto the portrait as a nod to the face-recognition project. Tap or click the card to re-run the scan.
 - **Motion graphics**: every project card has an animated SVG diagram of how the project works (TF-IDF to eight functions, camera to ESP32 to servo, blink check to three clients, modules to payslip, a binary-tree search, a gesture opening a site, a timed math round). Diagrams only animate while on screen.
-- **Parallax**: scroll-linked depth (GSAP ScrollTrigger) on the hero, toolkit, about and terminal; pointer depth on desktop; gyroscope depth on phones; three-depth particle field.
+- **Scroll choreography** (GSAP ScrollTrigger, scrubbed so it plays forwards and backwards with the scroll):
+  - Hero is pinned on desktop and comes apart: the three headline lines slide in opposite directions, the photo card leans in, the chips scatter.
+  - A tilted glass band of skills and logos slides in two directions; scrolling faster skews it.
+  - Section headings rise word by word out of a mask, from blur into focus.
+  - Project cards rise in 3D with a column-based lag, and each diagram drifts inside its frame.
+  - The terminal opens like a laptop lid; toolkit tiles fly in from scattered positions and assemble the grid.
+  - The about portrait opens from a small window; the journey timeline draws itself and lights each stop; certificates fan out; the contact panel grows into place.
+  - Glass orbs drift and turn at their own depth in every section, and the background aurora rotates and shifts colour through the page (desktop).
+- **Parallax**: pointer depth on desktop, gyroscope depth on phones, three-depth particle field.
 - **Typefaces**: Bricolage Grotesque (display), Instrument Sans (body), JetBrains Mono (terminal), all self-hosted through Fontsource.
 
 ## Interactions (desktop and mobile)
