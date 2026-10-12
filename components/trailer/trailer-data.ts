@@ -1,20 +1,66 @@
-/** Beat grid measured from the soundtrack: 83 BPM, first beat at 0.064 s, drop on beat 17 (12.35 s). */
-export const BEAT = 60 / 83;
-export const T0 = 0.064;
-export const b = (n: number) => T0 + n * BEAT;
+/**
+ * Beat grid measured from the soundtrack (librosa beat tracking, 85.02 BPM).
+ * Beat n sits at n × B seconds: the song was cut to start on a beat.
+ * - b13–b16 (9.17 – 11.29): the four build beats that open into the projects
+ * - b17 (12.00): the drop
+ * - the bass cuts out just before b29, b37 and b45 (≈19.9, 25.5 and 31.15 s)
+ */
+export const B = 60 / 85.0185;
+export const b = (n: number) => n * B;
 export const DROP = b(17);
 export const DURATION = 34.64;
+export const BREAKS = [19.9, 25.48, 31.13];
 
-export const chapters = [
-  { t: 0, label: 'Intro' },
-  { t: b(17), label: 'Penghitung' },
-  { t: b(29), label: 'Proyek ML' },
-  { t: b(37), label: 'Data ke model' },
-  { t: b(41), label: 'Penutup' },
+export type SceneId = 'open' | 'counter' | 'innerself' | 'voice' | 'trash' | 'face' | 'hand' | 'stock' | 'payroll' | 'laptop' | 'math' | 'recap' | 'outro';
+
+export const scenes: { id: SceneId; from: number; to: number; label: string }[] = [
+  { id: 'open', from: 0, to: b(17), label: 'Pembuka' },
+  { id: 'counter', from: b(17), to: b(21), label: 'Dense Object Counter' },
+  { id: 'innerself', from: b(21), to: b(24), label: 'InnerSelf Cognitive' },
+  { id: 'voice', from: b(24), to: b(26), label: 'Voice Dataset' },
+  { id: 'trash', from: b(26), to: b(29), label: 'Smart Trash' },
+  { id: 'face', from: b(29), to: b(32), label: 'Face Recognition' },
+  { id: 'hand', from: b(32), to: b(35), label: 'Hand Gesture' },
+  { id: 'stock', from: b(35), to: b(37), label: 'Stock Recording' },
+  { id: 'payroll', from: b(37), to: b(39), label: 'Payroll System' },
+  { id: 'laptop', from: b(39), to: b(41), label: 'Laptop Recommendation' },
+  { id: 'math', from: b(41), to: b(43), label: 'Math Game' },
+  { id: 'recap', from: b(43), to: b(45), label: 'Semua proyek' },
+  { id: 'outro', from: b(45), to: DURATION, label: 'Penutup' },
 ];
 
+/** Where each 3D subject sits: [x shift on landscape, y shift on portrait], as a fraction of the screen. */
+export const shift3d = {
+  counter: [0.15, 0.1], innerself: [0.17, 0.06], trash: [0.11, 0.1], face: [0.17, 0.08],
+} as const;
+
+export const chapters = [
+  { t: 0, label: 'Pembuka' },
+  ...scenes.filter(s => s.id !== 'open' && s.id !== 'outro').map(s => ({ t: s.from, label: s.label })),
+];
+
+/** Every public project repository on github.com/Hwarinn66 (the profile README and this site excluded). */
+export const projects = [
+  { id: 'counter', n: '01', name: 'Dense Object Counter', repo: 'Dense-Object-Counter', kind: 'Computer vision', hud: '#fca50a' },
+  { id: 'innerself', n: '02', name: 'InnerSelf Cognitive', repo: 'MBTI-Test-With-ML', kind: 'NLP · machine learning', hud: '#4b2a8c' },
+  { id: 'voice', n: '03', name: 'Voice Dataset', repo: 'Voice-Dataset', kind: 'Audio · RVC', hud: '#ff6a4d' },
+  { id: 'trash', n: '04', name: 'Smart Trash', repo: 'Smart-Trash', kind: 'ML + IoT', hud: '#c6f432' },
+  { id: 'face', n: '05', name: 'Face Recognition', repo: 'face-recognition', kind: 'Computer vision', hud: '#5ff3ff' },
+  { id: 'hand', n: '06', name: 'Hand Gesture', repo: 'Gesture-Hand', kind: 'Computer vision', hud: '#fff4e8' },
+  { id: 'stock', n: '07', name: 'Stock Recording', repo: 'Stock-Recording-Laravel · -TypeScript', kind: 'Web · QR', hud: '#ffd60a' },
+  { id: 'payroll', n: '08', name: 'Payroll System', repo: 'Payroll-System', kind: 'Web', hud: '#1d2a22' },
+  { id: 'laptop', n: '09', name: 'Laptop Recommendation', repo: 'laptop-recomendation-with-binary-tree', kind: 'Web · struktur data', hud: '#dbe9ff' },
+  { id: 'math', n: '10', name: 'Math Game', repo: 'math-game', kind: 'Web · game', hud: '#7dff6b' },
+] as const;
+
+export const repoNames = [
+  'Dense-Object-Counter', 'MBTI-Test-With-ML', 'Voice-Dataset', 'Smart-Trash', 'face-recognition', 'Gesture-Hand',
+  'Stock-Recording-Laravel', 'Stock-Recording-TypeScript', 'Payroll-System', 'laptop-recomendation-with-binary-tree', 'math-game',
+];
+export const repoLangs = ['Python', 'Python', 'Audio', 'Python', 'Python', 'Python', 'PHP', 'TypeScript', 'PHP', 'Python', 'Python'];
+
 /** Deterministic pseudo-random numbers so every play draws the same scene. */
-function rng(seed: number) {
+export function rng(seed: number) {
   return () => {
     seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -23,44 +69,26 @@ function rng(seed: number) {
   };
 }
 
-/** Region of interest and 3×3 tiles with 15% overlap, in the field's 0–1000 coordinate space. */
+/** Region of interest and 3×3 tiles with 15% overlap, in the tray's 0–1000 coordinate space. */
 export const ROI = { x: 100, y: 100, size: 800 };
 const TILE = ROI.size / (3 - 2 * 0.15);
 const STRIDE = TILE * 0.85;
 export const tiles = [0, 1, 2].flatMap(r => [0, 1, 2].map(c => ({ x: ROI.x + c * STRIDE, y: ROI.y + r * STRIDE, size: TILE })));
-/** Overlap bands where neighbouring tiles both see the same object. */
-const seams = [ROI.x + STRIDE, ROI.x + 2 * STRIDE].map(start => ({ from: start, to: start + TILE * 0.15 }));
 
-export type Obj = { x: number; y: number; r: number; rot: number; seam: boolean };
+export type Obj = { x: number; y: number; r: number; rot: number };
 
-/** 50 yellow objects packed densely inside the ROI, a few sitting on tile seams (for the NMS shot). */
+/** 50 objects packed densely inside the ROI. */
 export const objects: Obj[] = (() => {
   const rand = rng(61);
   const list: Obj[] = [];
-  const fits = (x: number, y: number, r: number) => list.every(o => Math.hypot(o.x - x, o.y - y) > o.r + r + 6);
-  // Six objects on the vertical seams first.
-  for (let i = 0; i < 6; i++) {
-    const seam = seams[i % 2];
-    for (let tries = 0; tries < 200; tries++) {
-      const x = seam.from + rand() * (seam.to - seam.from), y = ROI.y + 50 + rand() * (ROI.size - 100), r = 24 + rand() * 7;
-      if (fits(x, y, r)) { list.push({ x, y, r, rot: rand() * 180, seam: true }); break; }
-    }
-  }
-  for (let tries = 0; list.length < 50 && tries < 20000; tries++) {
-    const r = 22 + rand() * 9;
+  const fits = (x: number, y: number, r: number) => list.every(o => Math.hypot(o.x - x, o.y - y) > o.r + r + 8);
+  for (let tries = 0; list.length < 50 && tries < 30000; tries++) {
+    const r = 24 + rand() * 9;
     const x = ROI.x + r + 8 + rand() * (ROI.size - 2 * r - 16), y = ROI.y + r + 8 + rand() * (ROI.size - 2 * r - 16);
-    if (fits(x, y, r)) list.push({ x, y, r, rot: rand() * 180, seam: false });
+    if (fits(x, y, r)) list.push({ x, y, r, rot: rand() * Math.PI });
   }
   return list;
 })();
-
-/** Words that scatter into the objects at the end of the intro. */
-export const introLines = [['SETIAP', 'GAMBAR'], ['MENYIMPAN'], ['ANGKA.']];
-
-export const steps = ['Kamera', 'ROI', 'Tile', 'YOLO', 'NMS', 'Hitung'];
-export const stepNotes = ['snapshot dari kamera HP', 'crop sebelum detector', '1024 px, overlap 15%', 'satu kelas: object', 'gabung duplikat di seam', 'jumlah akhir'];
-
-export const stack = ['PYTHON', 'YOLO', 'OPENCV', 'TENSORFLOW', 'MEDIAPIPE'];
 
 const inferno: [number, [number, number, number]][] = [
   [0, [0, 0, 4]], [0.13, [27, 12, 65]], [0.25, [74, 12, 107]], [0.38, [120, 28, 109]], [0.5, [165, 44, 96]],
@@ -75,15 +103,15 @@ const sample = (v: number) => {
   return inferno[inferno.length - 1][1];
 };
 
-/** Density map of the objects, coloured with the inferno colormap. Rendered once, then animated as an image. */
-export function renderHeatmap(size = 256): string {
+/** Density map of the objects, coloured with the inferno colormap. */
+export function renderHeatmap(size = 256): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return '';
+  if (!ctx) return canvas;
   const scale = size / 1000;
   const field = new Float32Array(size * size);
-  const sigma = 46 * scale;
+  const sigma = 48 * scale;
   for (const o of objects) {
     const cx = o.x * scale, cy = o.y * scale, reach = Math.ceil(sigma * 3);
     for (let y = Math.max(0, Math.floor(cy - reach)); y < Math.min(size, cy + reach); y++) {
@@ -100,8 +128,50 @@ export function renderHeatmap(size = 256): string {
     const v = field[i] / max;
     const [r, g, bl] = sample(Math.pow(v, 0.8));
     img.data[i * 4] = r; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = bl;
-    img.data[i * 4 + 3] = Math.round(Math.min(1, v * 1.5) * 255);
+    img.data[i * 4 + 3] = Math.round(Math.min(1, v * 1.6) * 255);
   }
   ctx.putImageData(img, 0, 0);
-  return canvas.toDataURL('image/png');
+  return canvas;
 }
+
+/** A small QR-like module grid (decorative, not a scannable code) with the three finder squares. */
+export const qrGrid: boolean[][] = (() => {
+  const n = 25, rand = rng(7);
+  const g = Array.from({ length: n }, () => Array.from({ length: n }, () => rand() > 0.52));
+  const finder = (r0: number, c0: number) => {
+    for (let r = -1; r < 8; r++) for (let c = -1; c < 8; c++) {
+      const rr = r0 + r, cc = c0 + c;
+      if (rr < 0 || cc < 0 || rr >= n || cc >= n) continue;
+      const ring = Math.max(Math.abs(r - 3), Math.abs(c - 3));
+      g[rr][cc] = r >= 0 && c >= 0 && r < 7 && c < 7 && (ring === 3 || ring <= 1);
+    }
+  };
+  finder(0, 0); finder(0, n - 7); finder(n - 7, 0);
+  return g;
+})();
+
+/** Laptop prices (juta rupiah) inserted into a binary search tree in this order. */
+export const laptopPrices = [12, 7, 18, 5, 9, 15, 22, 4, 6, 8, 11, 14, 16, 20, 25];
+export type BstNode = { v: number; x: number; y: number; depth: number; parent: number };
+export const bst: BstNode[] = (() => {
+  const nodes: BstNode[] = [];
+  const left: Record<number, number> = {}, right: Record<number, number> = {};
+  for (const v of laptopPrices) {
+    if (!nodes.length) { nodes.push({ v, x: 0.5, y: 0, depth: 0, parent: -1 }); continue; }
+    let i = 0, depth = 0;
+    for (;;) {
+      depth++;
+      const side = v <= nodes[i].v ? left : right;
+      if (side[i] === undefined) {
+        const spread = 0.25 / 2 ** (depth - 1);
+        nodes.push({ v, x: nodes[i].x + (v <= nodes[i].v ? -spread : spread), y: depth, depth, parent: i });
+        side[i] = nodes.length - 1;
+        break;
+      }
+      i = side[i];
+    }
+  }
+  return nodes;
+})();
+/** Search range for the BST shot: 8 – 15 juta. Nodes outside are pruned. */
+export const bstRange = [8, 15] as const;

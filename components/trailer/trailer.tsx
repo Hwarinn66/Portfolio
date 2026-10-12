@@ -2,12 +2,32 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LayoutGrid, Pause, Play, RotateCcw, Volume2, VolumeX, X } from 'lucide-react';
+import '@fontsource-variable/fraunces/full-italic.css';
+import '@fontsource/instrument-serif/400.css';
+import '@fontsource/instrument-serif/400-italic.css';
+import '@fontsource-variable/big-shoulders-display';
+import '@fontsource/saira-stencil-one/400.css';
+import '@fontsource/chakra-petch/600.css';
+import '@fontsource/chakra-petch/700.css';
+import '@fontsource-variable/unbounded';
+import '@fontsource/press-start-2p/400.css';
+import '@fontsource/barlow-condensed/800.css';
+import './trailer.css';
 import { getTrailerAudio } from '@/lib/trailer-audio';
 import TrailerStage from './trailer-stage';
 import { buildTrailerTimeline } from './trailer-timeline';
 import { chapters, DURATION, renderHeatmap } from './trailer-data';
+import { createWorld, type World } from './three/world';
 
 const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+/** Every face the trailer uses, loaded before the first frame so no title swaps fonts mid-shot. */
+const FONTS = [
+  '900 40px "Archivo Variable"', 'italic 400 40px "Fraunces Variable"', '400 40px "Instrument Serif"', 'italic 400 40px "Instrument Serif"',
+  '900 40px "Big Shoulders Display Variable"', '400 40px "Saira Stencil One"', '700 40px "Chakra Petch"', '600 40px "Chakra Petch"',
+  '900 40px "Unbounded Variable"', '400 40px "Press Start 2P"', '800 40px "Barlow Condensed"', '500 40px "Instrument Sans Variable"',
+  '600 40px "JetBrains Mono Variable"',
+];
 
 function makeGrain(size = 160) {
   const c = document.createElement('canvas');
@@ -24,25 +44,29 @@ function makeGrain(size = 160) {
   return c.toDataURL('image/png');
 }
 
+const isMobile = () => window.matchMedia('(max-width: 720px)').matches || window.innerHeight > window.innerWidth;
+
 type Props = { onClose: () => void; onSeeProjects: () => void };
 
 /**
  * Full-screen trailer player. The soundtrack is the master clock: every frame
- * the GSAP timeline is set to audio.currentTime, so cuts land on the beat. If
- * the browser will not play sound, a silent clock takes over.
+ * the GSAP timeline and the 3D world are set to audio.currentTime, so cuts land
+ * on the beat. If the browser will not play sound, a silent clock takes over.
  */
 export default function Trailer({ onClose, onSeeProjects }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLSpanElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const worldRef = useRef<World | null>(null);
   const clock = useRef({ mode: 'audio' as 'audio' | 'clock', base: 0, startedAt: 0, running: false, ended: false, heard: false, userPaused: false });
   const hideTimer = useRef<number | undefined>(undefined);
   const swipe = useRef<{ x: number; y: number; t: number } | null>(null);
 
-  const [assets, setAssets] = useState({ heat: '', grain: '' });
+  const [grain, setGrain] = useState('');
+  const [ready, setReady] = useState(false);
+  const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [silent, setSilent] = useState(false);
   const [muted, setMuted] = useState(false);
   const [ended, setEnded] = useState(false);
@@ -56,29 +80,59 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     return c.running ? c.base + (now() - c.startedAt) : c.base;
   }, []);
 
-  // Assets drawn once on the client; page behind is made inert and stops animating.
+  const goSilent = useCallback((startAt: number) => {
+    const c = clock.current;
+    c.mode = 'clock'; c.base = startAt; c.startedAt = now(); c.running = true;
+    // Cancel a play() that may still be pending, so a late start cannot drift from the picture.
+    getTrailerAudio().pause();
+    setSilent(true); setPlaying(true); setStarted(true);
+  }, []);
+
+  // Page behind is made inert and stops animating; fonts load; then the music starts.
   useEffect(() => {
-    setAssets({ heat: renderHeatmap(), grain: makeGrain() });
+    setGrain(makeGrain());
     const html = document.documentElement;
     html.classList.add('trailer-open');
     const shell = Array.from(document.querySelectorAll<HTMLElement>('.site-header, main, .mobile-dock, .site-footer'));
     shell.forEach(el => el.setAttribute('inert', ''));
-    return () => { html.classList.remove('trailer-open'); shell.forEach(el => el.removeAttribute('inert')); };
+    // The click already started the audio (that is what unlocks sound); hold it at 0 until the picture is ready.
+    const audio = getTrailerAudio();
+    audio.pause();
+    try { audio.currentTime = 0; } catch { /* not seekable yet */ }
+    let cancelled = false;
+    let world: World | null = null;
+    const fonts = Promise.all(FONTS.map(f => document.fonts.load(f).catch(() => null)));
+    const timeout = new Promise(resolve => window.setTimeout(resolve, 4000));
+    // 3D world after the fonts (its labels are drawn with them); shaders compile here, before the music starts.
+    Promise.race([fonts, timeout]).then(() => {
+      if (cancelled) return;
+      const canvas = root.current?.querySelector<HTMLCanvasElement>('.tv-3d');
+      if (canvas) {
+        try { world = createWorld(canvas, { mobile: isMobile(), heat: renderHeatmap(256) }); } catch { world = null; }
+        worldRef.current = world;
+      }
+      setReady(true);
+    });
+    const onResize = () => world?.resize(window.innerWidth, window.innerHeight);
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelled = true; window.removeEventListener('resize', onResize);
+      world?.dispose(); worldRef.current = null;
+      html.classList.remove('trailer-open'); shell.forEach(el => el.removeAttribute('inert'));
+    };
   }, []);
 
-  // Build (and rebuild on resize/rotation) the timeline, keeping the playhead.
+  // Timeline: built when ready, rebuilt on resize/rotation, keeping the playhead.
   useEffect(() => {
-    if (!assets.heat || !root.current) return;
-    const mobile = window.matchMedia('(max-width: 720px)').matches || window.innerHeight > window.innerWidth;
-    const gentle = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const tl = buildTrailerTimeline(root.current, { mobile, gentle });
+    if (!ready || !root.current) return;
+    const tl = buildTrailerTimeline(root.current, { mobile: isMobile(), gentle: window.matchMedia('(prefers-reduced-motion: reduce)').matches });
     tlRef.current = tl;
     tl.time(Math.min(currentTime(), DURATION));
     let timer = 0;
     const onResize = () => { window.clearTimeout(timer); timer = window.setTimeout(() => setLayoutKey(key => key + 1), 250); };
     window.addEventListener('resize', onResize);
     return () => { window.removeEventListener('resize', onResize); window.clearTimeout(timer); tl.revert(); tl.kill(); tlRef.current = null; };
-  }, [assets.heat, layoutKey, currentTime]);
+  }, [ready, layoutKey, currentTime]);
 
   const finish = useCallback(() => {
     const c = clock.current;
@@ -87,26 +141,26 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     setEnded(true); setPlaying(false); setUi(true);
   }, []);
 
-  const goSilent = useCallback((startAt: number) => {
-    const c = clock.current;
-    c.mode = 'clock'; c.base = startAt; c.startedAt = now(); c.running = true;
-    setSilent(true); setLoading(false); setPlaying(true);
-  }, []);
-
-  // Master loop + audio events.
+  // Start the music when ready; master loop + audio events.
   useEffect(() => {
+    if (!ready) return;
     const audio = getTrailerAudio();
     let raf = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const t = Math.min(currentTime(), DURATION);
       tlRef.current?.time(t);
+      worldRef.current?.render(t);
       if (fillRef.current) fillRef.current.style.transform = `scaleX(${t / DURATION})`;
       if (timeRef.current) timeRef.current.textContent = `${fmt(t)} / ${fmt(DURATION)}`;
       if (t >= DURATION - 0.03) finish();
     };
     raf = requestAnimationFrame(loop);
-    const onPlaying = () => { clock.current.heard = true; if (clock.current.mode === 'audio') { setLoading(false); setPlaying(true); } };
+    const onPlaying = () => {
+      const c = clock.current;
+      if (c.mode !== 'audio') { audio.pause(); return; }
+      c.heard = true; setPlaying(true); setStarted(true);
+    };
     const onPause = () => { if (clock.current.mode === 'audio') setPlaying(false); };
     const onEnded = () => finish();
     const onError = () => { if (clock.current.mode === 'audio') goSilent(audio.currentTime || 0); };
@@ -114,17 +168,17 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
-    if (!audio.paused) onPlaying();
-    // The browser refused sound (or it never loaded): run silently on a clock.
-    // Only when sound never started and the viewer has not paused on purpose.
-    const fallback = window.setTimeout(() => { const c = clock.current; if (!c.heard && !c.userPaused && audio.paused && c.mode === 'audio' && !c.ended) goSilent(0); }, 2600);
+    try { audio.currentTime = 0; } catch { /* ignore */ }
+    audio.play().catch(() => { if (clock.current.mode === 'audio' && !clock.current.heard) goSilent(0); });
+    // Sound never started (blocked or still loading) and nobody paused on purpose: run on a silent clock.
+    const fallback = window.setTimeout(() => { const c = clock.current; if (!c.heard && !c.userPaused && c.mode === 'audio' && !c.ended) goSilent(0); }, 6000);
     return () => {
       cancelAnimationFrame(raf); window.clearTimeout(fallback);
       audio.removeEventListener('playing', onPlaying); audio.removeEventListener('pause', onPause);
       audio.removeEventListener('ended', onEnded); audio.removeEventListener('error', onError);
       audio.pause();
     };
-  }, [currentTime, finish, goSilent]);
+  }, [ready, currentTime, finish, goSilent]);
 
   const poke = useCallback(() => {
     setUi(true);
@@ -139,6 +193,7 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     if (c.mode === 'audio') { audio.currentTime = target; }
     else { c.base = target; c.startedAt = now(); }
     tlRef.current?.time(target);
+    worldRef.current?.render(target);
   }, []);
 
   const togglePlay = useCallback(() => {
@@ -154,8 +209,10 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
   const enableSound = useCallback(() => {
     const c = clock.current, audio = getTrailerAudio();
     const t = currentTime();
+    c.mode = 'audio';
     audio.currentTime = t;
-    audio.play().then(() => { c.mode = 'audio'; setSilent(false); setPlaying(true); }).catch(() => { /* stay silent */ });
+    audio.play().then(() => { c.heard = true; setSilent(false); setPlaying(true); })
+      .catch(() => { c.mode = 'clock'; c.base = t; c.startedAt = now(); c.running = true; });
   }, [currentTime]);
 
   const jumpChapter = useCallback((dir: 1 | -1) => {
@@ -197,9 +254,9 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     poke();
   };
 
-  return <div ref={root} className="trailer" role="dialog" aria-modal="true" aria-label="Trailer proyek machine learning Efriza" onMouseMove={poke}>
-    <p className="sr-only">Trailer 35 detik bermusik: aplikasi Dense Object Counter (kamera, ROI, tile, YOLO, NMS, hitung), lalu InnerSelf, Smart Trash, Face Recognition, dan Hand Gesture, alur data ke model, dan penutup.</p>
-    <TrailerStage key={layoutKey} heat={assets.heat} grain={assets.grain} />
+  return <div ref={root} className="trailer" role="dialog" aria-modal="true" aria-label="Trailer proyek Efriza" onMouseMove={poke}>
+    <p className="sr-only">Trailer 35 detik bermusik berisi sepuluh proyek di GitHub Efriza: Dense Object Counter, InnerSelf Cognitive, Voice Dataset, Smart Trash, Face Recognition, Hand Gesture, Stock Recording, Payroll System, Laptop Recommendation, dan Math Game.</p>
+    <TrailerStage grain={grain} />
 
     <div className="tr-hit" onPointerDown={e => { swipe.current = { x: e.clientX, y: e.clientY, t: performance.now() }; }}
       onPointerUp={e => {
@@ -213,11 +270,11 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     <div className={`tr-ui ${ui || !playing ? '' : 'is-hidden'}`}>
       <button className="tr-close" onClick={close} aria-label="Tutup trailer"><X size={20} /></button>
       {silent && <button className="tr-silent" onClick={enableSound}><VolumeX size={15} />Tanpa suara. Ketuk untuk menyalakan musik</button>}
-      {loading && !silent && <p className="tr-status"><span className="tr-spin" />Memuat musik…</p>}
+      {(!ready || !started) && !silent && <p className="tr-status"><span className="tr-spin" />{ready ? 'Memuat musik…' : 'Menyiapkan trailer…'}</p>}
       <div className="tr-controls">
-        <button className="tr-btn" onClick={() => jumpChapter(-1)} aria-label="Bab sebelumnya"><ChevronLeft size={18} /></button>
+        <button className="tr-btn" onClick={() => jumpChapter(-1)} aria-label="Bagian sebelumnya"><ChevronLeft size={18} /></button>
         <button className="tr-btn is-primary" onClick={togglePlay} aria-label={playing ? 'Jeda' : 'Putar'}>{playing ? <Pause size={18} /> : <Play size={18} />}</button>
-        <button className="tr-btn" onClick={() => jumpChapter(1)} aria-label="Bab berikutnya"><ChevronRight size={18} /></button>
+        <button className="tr-btn" onClick={() => jumpChapter(1)} aria-label="Bagian berikutnya"><ChevronRight size={18} /></button>
         <div className="tr-track" onPointerDown={scrub} role="slider" aria-label="Posisi trailer" aria-valuemin={0} aria-valuemax={Math.round(DURATION)} tabIndex={0}>
           <div className="tr-track-bar"><div ref={fillRef} className="tr-track-fill" />{chapters.slice(1).map(ch => <i key={ch.label} className="tr-chap" style={{ left: `${(ch.t / DURATION) * 100}%` }} title={ch.label} />)}</div>
         </div>

@@ -39,13 +39,15 @@ Terminal commands: `bantuan`, `tentang`, `proyek`, `buka <nomor|nama>`, `filter 
 
 ## Trailer
 
-The hero's **Lihat trailer** button (or the terminal command `trailer`) opens a 34-second machine-learning reel. It is optional and never plays on its own.
+The hero's **Lihat trailer** button (or the terminal command `trailer`) opens a 34-second reel of every public project on [github.com/Hwarinn66](https://github.com/Hwarinn66). It is optional and never plays on its own.
 
-- **Look**: a dark "camera viewfinder" style that is deliberately different from the light site: black, plum and amber (inferno colour map), Archivo variable type that stretches on the beat, film grain, letterbox bars and a recording HUD.
-- **Story**: intro type, then the newest repository, [penghitung](https://github.com/Hwarinn66/penghitung) (Dense Object Counter), told as its pipeline (camera, ROI, tiles, YOLO, NMS, count), then InnerSelf, Smart Trash, Face Recognition and Hand Gesture, the data-to-model workflow, the stack, and the name card.
-- **Sync**: one paused GSAP timeline whose every cut sits on the song's beat grid (83 BPM, drop at 12.35 s). The player sets the timeline to the audio clock each frame, so picture and music stay locked and scrubbing works.
-- **Controls**: play/pause, previous/next chapter, a scrubbable track with chapter marks, mute, close. Keyboard: Space/K, ←/→ (3 s), M, Esc. On phones: tap to pause, swipe left/right to change chapter. If the browser blocks audio it runs silently with a button to turn the music on.
-- **Cost**: the trailer code, font and music load only when the button is hovered, focused or pressed. The site's own animation loops pause while it is open.
+- **Structure**: an AI-assistant style opening (sparkle, name, a particle "10", a prompt that types "tampilkan semua proyekku"), then the four build beats (9.2 – 11.3 s) open into the projects: the prompt turns into an "analysing" pill, the 11 repositories are pulled in, a results panel opens and folds into light that rushes into the drop. Ten project scenes follow, then a recap grid and the name card.
+- **Each project has its own world**: background, palette and typeface are chosen per project (Archivo extended for Dense Object Counter, Fraunces italic for InnerSelf, Big Shoulders for Voice Dataset, Saira Stencil for Smart Trash, Chakra Petch for Face Recognition, Unbounded for Hand Gesture, Barlow Condensed for Stock Recording, Instrument Serif for Payroll, monospace blueprint for the laptop BST and Press Start 2P for Math Game).
+- **3D (Three.js)** for the machine-learning projects, modelled in code: the counting tray with 50 objects, bounding boxes and the phone camera frustum; the InnerSelf orb with the eight cognitive functions; an ESP32 dev board with a micro servo that swings left/right on the beat; a point-cloud face that is scanned, blinks and then flies into a 21-landmark hand that signs four gestures.
+- **Transitions on the beat**: dive and iris, orb squashed into a waveform, rising bars, CRT switch-off on the first bass cut, morph from face to hand, swipe, pixel staircase on the second bass cut, blueprint sheet, pixel mosaic, and tiles collapsing into the sparkle on the third.
+- **Sync**: one paused GSAP timeline on the song's beat grid (85 BPM, beat *n* at *n* × 0.7057 s, drop at 12.0 s). The player sets the timeline and the 3D world to the audio clock each frame, so picture and music stay locked and scrubbing works.
+- **Controls**: play/pause, previous/next project, a scrubbable track with a mark per project, mute, close. Keyboard: Space/K, ←/→ (3 s), M, Esc. On phones: tap to pause, swipe left/right to change project. If the browser blocks audio it runs silently with a button to turn the music on.
+- **Cost**: the trailer code (including Three.js), its fonts and the music load only when the button is hovered, focused or pressed. Shaders compile before the music starts. The site's own animation loops pause while it is open; film grain is skipped on touch screens.
 
 ## Accessibility and performance
 
@@ -88,7 +90,8 @@ Next.js performs a static export to `out/`. Serve that directory over HTTP (not 
 | `components/use-ambient-motion.ts`, `components/use-tilt.ts` | Pointer, touch and gyroscope motion |
 | `components/glass-dialog.tsx`, `components/project-detail.tsx` | Dialog / bottom sheet and project detail |
 | `components/opening.tsx`, `app/layout.tsx` | First-visit opening and the head script that decides whether it plays |
-| `components/trailer/` | Trailer stage (markup), timeline (all motion, beat-locked), player and data |
+| `components/trailer/` | Trailer stage (markup), `trailer.css`, timeline (all 2D motion, beat-locked), player and data |
+| `components/trailer/three/` | Trailer 3D: one WebGL world and a rig per 3D shot (counter, orb, ESP32, face → hand, particle numeral) |
 | `lib/trailer-audio.ts`, `public/audio/trailer.mp3` | Trailer soundtrack, started inside the click so browsers allow sound |
 | `app/globals.css` | Design tokens, glass, layouts, diagram animations, responsive rules |
 | `public/assets/`, `public/documents/` | Photos, certificates, technology logos, CV and portfolio PDFs |

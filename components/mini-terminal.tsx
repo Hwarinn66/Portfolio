@@ -75,7 +75,7 @@ export default function MiniTerminal({ actions }: { actions: TerminalActions }) 
 
     switch (command) {
       case 'bantuan': return [line('out', <div className="term-grid">
-        {[['trailer', 'putar trailer machine learning'], ['tentang', 'siapa saya'], ['proyek', 'daftar tujuh proyek'], ['buka <nomor>', 'detail proyek, mis. buka 2'], ['filter <ml|cv|iot|web>', 'saring kartu proyek'], ['skill', 'teknologi yang saya pakai'],
+        {[['trailer', 'putar trailer 10 proyek'], ['tentang', 'siapa saya'], ['proyek', 'daftar tujuh proyek'], ['buka <nomor>', 'detail proyek, mis. buka 2'], ['filter <ml|cv|iot|web>', 'saring kartu proyek'], ['skill', 'teknologi yang saya pakai'],
           ['pendidikan', 'kampus dan jurusan'], ['pengalaman', 'riwayat kerja'], ['kontak', 'cara menghubungi saya'], ['cv', 'unduh CV (PDF)'], ['salin-email', 'salin alamat email'], ['gerak', 'jeda atau aktifkan animasi'], ['bersihkan', 'kosongkan layar']]
           .map(([c, d]) => <span key={c}><b>{c}</b><i>{d}</i></span>)}
       </div>), line('out', <>Ada satu perintah rahasia. Petunjuk: <b>sudo</b>.</>)];

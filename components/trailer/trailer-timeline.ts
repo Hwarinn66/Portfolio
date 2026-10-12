@@ -1,272 +1,396 @@
 import { gsap } from 'gsap';
-import { b, DROP, DURATION, objects } from './trailer-data';
+import { B, b, BREAKS, DROP, DURATION, projects, scenes, shift3d, type SceneId } from './trailer-data';
 
 type Opts = { mobile: boolean; gentle: boolean };
 
-const pseudo = (i: number, salt: number) => { const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return x - Math.floor(x); };
 const wdth = (n: number) => `'wdth' ${n}`;
+const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const prog = (t: number, at: number, d: number) => clamp01((t - at) / d);
+const hash = (n: number) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
+const outCubic = (x: number) => 1 - Math.pow(1 - x, 3);
+
+const hudColor: Record<SceneId, string> = {
+  open: '#dfe4ff', counter: '#fcd38a', innerself: '#3b2378', voice: '#ffd0bd', trash: '#c6f432', face: '#8fefff', hand: '#ffffff',
+  stock: '#ffd60a', payroll: '#1d2a22', laptop: '#dbe9ff', math: '#7dff6b', recap: '#dfe4ff', outro: '#dfe4ff',
+};
 
 /**
- * The whole trailer as one paused GSAP timeline, every tween placed on the
- * soundtrack's beat grid (83 BPM). The player drives it with tl.time(audio.currentTime),
- * so picture and music stay locked even when frames drop, and scrubbing works.
+ * The whole trailer as one paused GSAP timeline, every cut placed on the
+ * soundtrack's beat grid (85 BPM, beat n at n × B). The player sets it to the
+ * audio clock each frame; the 3D world reads the same clock.
  */
 export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts) {
-  const one = (s: string) => root.querySelector(s) as HTMLElement;
-  const all = (s: string) => Array.from(root.querySelectorAll(s)) as HTMLElement[];
+  const q = (s: string) => root.querySelector(s) as HTMLElement;
+  const qa = (s: string) => Array.from(root.querySelectorAll(s)) as HTMLElement[];
   const k = gentle ? 0.35 : 1;
   const vw = window.innerWidth, vh = window.innerHeight;
-
-  const cam = one('.tr-cam'), punchEl = one('.tr-punch'), flashEl = one('.tr-flash');
+  const portrait = mobile;
   const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out', immediateRender: false } });
 
   const show = (t: number, target: gsap.TweenTarget, d = 0.3, from: gsap.TweenVars = {}, to: gsap.TweenVars = {}) =>
-    tl.fromTo(target, { autoAlpha: 0, ...from }, { autoAlpha: 1, duration: d, ...to }, t);
-  const hide = (t: number, target: gsap.TweenTarget, d = 0.22, to: gsap.TweenVars = {}) =>
-    tl.fromTo(target, { autoAlpha: 1 }, { autoAlpha: 0, duration: d, ease: 'power2.in', ...to }, t);
-  const punch = (t: number, s = 1.06) => tl.fromTo(punchEl, { scale: 1 + (s - 1) * k }, { scale: 1, duration: 0.4, ease: 'power3.out' }, t);
-  const shake = (t: number, amp = 16) => tl.fromTo(punchEl, { x: amp * k, y: -amp * 0.6 * k, rotation: amp * 0.04 * k }, { x: 0, y: 0, rotation: 0, duration: 0.45, ease: 'elastic.out(1.1, 0.28)' }, t);
-  const flash = (t: number, o = 0.5) => tl.fromTo(flashEl, { opacity: o * (gentle ? 0.35 : 1) }, { opacity: 0, duration: 0.34, ease: 'power2.out' }, t);
-  const secs = all('.tr-sec');
-  const section = (t: number, i: number) => {
-    if (i > 0) hide(t, secs[i - 1], 0.15);
-    show(t + 0.05, secs[i], 0.3, { y: 8 }, { y: 0 });
+    tl.fromTo(target, { autoAlpha: 0, ...from }, { autoAlpha: 1, duration: d, immediateRender: true, ...to }, t);
+  const hide = (t: number, target: gsap.TweenTarget, d = 0.22, to: gsap.TweenVars = {}, from: gsap.TweenVars = {}) =>
+    tl.fromTo(target, { autoAlpha: 1, ...from }, { autoAlpha: 0, duration: d, ease: 'power2.in', ...to }, t);
+  const screen = q('.tv-screen');
+  const punch = (t: number, s = 1.05) => tl.fromTo(screen, { scale: 1 + (s - 1) * k }, { scale: 1, duration: 0.38, ease: 'power3.out' }, t);
+  const shake = (t: number, amp = 14) => tl.fromTo(screen, { x: amp * k, y: -amp * 0.6 * k, rotation: amp * 0.04 * k }, { x: 0, y: 0, rotation: 0, duration: 0.42, ease: 'elastic.out(1.1, 0.3)' }, t);
+  const flash = (t: number, o = 0.5) => tl.fromTo('.x-flash', { opacity: o * (gentle ? 0.35 : 1) }, { opacity: 0, duration: 0.36, ease: 'power2.out' }, t);
+  const sceneOn = (id: SceneId, t: number, d = 0.01) => tl.fromTo([`.bg-${id}`, `.fg-${id}`], { autoAlpha: 0 }, { autoAlpha: 1, duration: d, ease: 'none' }, t);
+  const sceneOff = (id: SceneId, t: number, d = 0.01) => tl.fromTo([`.bg-${id}`, `.fg-${id}`], { autoAlpha: 1 }, { autoAlpha: 0, duration: d, ease: 'none' }, t);
+  const kick = (id: SceneId, t: number) => show(t, `.fg-${id} .kick`, 0.4, { x: -16 }, { x: 0 });
+  // Where the 3D subject sits on screen (the world shifts its camera by the same amount).
+  const subject = (id: keyof typeof shift3d) => {
+    const [sx, sy] = shift3d[id];
+    return portrait ? { x: vw * 0.5, y: vh * (0.5 + sy) } : { x: vw * (0.5 + sx), y: vh * 0.5 };
   };
+  const center = (el: HTMLElement) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
 
-  // ── HUD and ignition (0 – 2.9) ──────────────────────────────
-  tl.fromTo('.tr-c', { autoAlpha: 0, scale: 1.8 }, { autoAlpha: 1, scale: 1, duration: 1.3, stagger: 0.08, ease: 'expo.out' }, 0.25);
-  show(0.7, '.tr-hud-tl', 0.6, { x: -16 }, { x: 0 });
-  show(0.9, '.tr-hud-tr', 0.6, { x: 16 }, { x: 0 });
-  show(1.1, '.tr-hud-br', 0.6);
-  section(1.1, 0);
-  const core = one('.tr-core');
-  tl.fromTo(core, { autoAlpha: 0, scale: 0 }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: 'back.out(3)' }, 0.06)
-    .fromTo(core, { scaleX: 1, scaleY: 1 }, { scaleX: mobile ? 24 : 52, scaleY: 0.2, duration: 2.1, ease: 'expo.inOut' }, 0.7);
+  // ── HUD ───────────────────────────────────────────────────
+  show(0.35, '.hud', 0.6);
 
-  // ── Kinetic type: "SETIAP GAMBAR / MENYIMPAN / ANGKA." on the intro phrase hits ──
-  const words = all('.tr-word');
-  const charsOf = (w: HTMLElement) => Array.from(w.querySelectorAll('.tr-ch')) as HTMLElement[];
-  const typeIn = (t: number, w: HTMLElement, opts: gsap.TweenVars = {}) => {
-    tl.fromTo(w, { fontVariationSettings: wdth(62) }, { fontVariationSettings: wdth(125), duration: 0.8, ease: 'expo.out' }, t);
-    tl.fromTo(charsOf(w), { autoAlpha: 0, yPercent: 115, rotation: 10 }, { autoAlpha: 1, yPercent: 0, rotation: 0, duration: 0.55, stagger: 0.035, ease: 'expo.out', ...opts }, t);
-  };
-  typeIn(b(4), words[0]);              // 2.96 SETIAP
-  tl.fromTo(core, { opacity: 1 }, { opacity: 0.25, duration: 0.6 }, b(4));
-  typeIn(b(5), words[1]);              // 3.68 GAMBAR
-  typeIn(b(6), words[2]);              // 4.40 MENYIMPAN
-  tl.fromTo(core, { opacity: 0.25 }, { opacity: 0.1, duration: 0.5 }, b(6));
-  tl.fromTo(charsOf(words[3]), { autoAlpha: 0, scale: 2.6, yPercent: -20 }, { autoAlpha: 1, scale: 1, yPercent: 0, duration: 0.5, stagger: 0.05, ease: 'expo.out' }, b(8)); // 5.85 ANGKA.
-  tl.fromTo(words[3], { fontVariationSettings: wdth(62) }, { fontVariationSettings: wdth(125), duration: 0.9, ease: 'expo.out' }, b(8));
-  flash(b(8), 0.35); punch(b(8), 1.05);
-
-  // Letters scatter and the objects appear where they land (6.57).
-  const allChars = all('.tr-ch');
-  tl.fromTo(allChars, { x: 0, y: 0, rotation: 0, autoAlpha: 1 },
-    { x: i => (pseudo(i, 1) - 0.5) * vw * 0.9, y: i => (pseudo(i, 2) - 0.5) * vh * 0.8, rotation: i => (pseudo(i, 3) - 0.5) * 220, autoAlpha: 0, scale: 0.3, duration: 0.7, ease: 'power3.in', stagger: 0.008 }, b(9));
-  tl.fromTo(core, { autoAlpha: 0.1 }, { autoAlpha: 0, duration: 0.3 }, b(9) + 0.3);
-  show(b(9) + 0.15, '.tr-field-layer', 0.01);
-  show(b(9) + 0.15, '.tr-frame', 0.8, { scale: 1.08, transformOrigin: '50% 50%' }, { scale: 1, ease: 'expo.out' });
-  const objs = all('.tr-obj');
-  tl.fromTo(objs, { autoAlpha: 0, scale: 0, transformOrigin: '50% 50%' }, { autoAlpha: 1, scale: 1, duration: 0.42, ease: 'back.out(2.4)', stagger: i => 0.04 * i * (0.6 + pseudo(i, 4) * 0.4) }, b(9) + 0.3);
-  show(b(10) + 0.2, '.tr-q', 0.5, { y: 14 }, { y: 0 });
-  tl.fromTo(cam, { scale: 1, rotation: 0, rotationX: 0 }, { scale: 1.07, rotation: -1.4, duration: b(13) - b(9), ease: 'none' }, b(9));
-
-  // ── Build: ROI draws, tiles light on each kick of the roll (9.46 – 12.35) ──
-  hide(b(13), '.tr-q', 0.2);
-  tl.fromTo('.tr-roi', { autoAlpha: 1, strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.55, ease: 'power2.inOut' }, b(13));
-  show(b(13) + 0.1, '.tr-roi-mask', 0.5, {}, { autoAlpha: 0.6 });
-  const kicks = [9.72, 9.94, 10.4, 10.64, 10.86, 11.26, 11.51, 11.72, 12.05];
-  const order = [0, 1, 2, 5, 4, 3, 6, 7, 8];
-  const tileEls = all('.tr-tile'), tileHi = all('.tr-tile-hi');
-  kicks.forEach((t, i) => {
-    const n = order[i];
-    show(t, tileEls[n], 0.08);
-    tl.fromTo(tileHi[n], { autoAlpha: 0.75 }, { autoAlpha: 0, duration: 0.3, ease: 'power2.out' }, t);
-    punch(t, 1.02);
+  // ── OPENING (0 – 12.0): light → sparkle → name → particle "10" → dark AI prompt → 4 build beats ──
+  tl.fromTo('.op-streak', { autoAlpha: 0, scaleX: 0.04, x: vw * 0.45 }, { autoAlpha: 1, scaleX: 1, x: 0, duration: 0.6, ease: 'expo.out' }, 0.04);
+  tl.fromTo('.op-streak', { scaleX: 1, autoAlpha: 1 }, { scaleX: 0, autoAlpha: 0, duration: 0.26, ease: 'power3.in' }, b(1) - 0.22);
+  tl.fromTo('.op-halo', { autoAlpha: 0, scale: 0.5 }, { autoAlpha: 1, scale: 1.25, duration: 0.7, ease: 'expo.out' }, b(1));
+  hide(b(1) + 0.45, '.op-halo', 0.7, { scale: 1.6 }, { scale: 1.25 });
+  const word = q('.op-word'), mark = q('.op-mark');
+  const markShift = (word.getBoundingClientRect().width + (parseFloat(getComputedStyle(mark).columnGap) || 0)) / 2;
+  tl.fromTo('.op-spark', { scale: 0, rotation: -140, autoAlpha: 0 }, { scale: 1, rotation: 0, autoAlpha: 1, duration: 0.75, ease: 'back.out(2.2)', immediateRender: true }, b(1) - 0.05);
+  tl.fromTo(mark, { x: markShift }, { x: 0, duration: 0.65, ease: 'expo.inOut', immediateRender: true }, b(2) - 0.12);
+  tl.fromTo('.op-word .ch', { autoAlpha: 0, y: 22, filter: 'blur(6px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.38, stagger: 0.06, ease: 'expo.out', immediateRender: true }, b(2) + 0.04);
+  tl.fromTo('.op-sub', { autoAlpha: 0, y: 10, letterSpacing: '0.6em' }, { autoAlpha: 1, y: 0, letterSpacing: portrait ? '0.14em' : '0.24em', duration: 0.7, ease: 'expo.out' }, b(3));
+  tl.fromTo([mark, '.op-sub'], { autoAlpha: 1, scale: 1, filter: 'blur(0px)' }, { autoAlpha: 0, scale: 0.84, filter: 'blur(12px)', duration: 0.45, ease: 'power2.in' }, b(4) - 0.32);
+  tl.fromTo('.op-dark', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: 'power2.inOut' }, b(4) - 0.25);
+  show(b(5), '.op-numlabel', 0.6, { y: 18 }, { y: 0, ease: 'expo.out' });
+  hide(b(7.55), '.op-numlabel', 0.3, { y: -12 });
+  tl.fromTo('.op-hi', { autoAlpha: 0, y: 16, filter: 'blur(8px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: 'expo.out' }, b(8) + 0.1);
+  tl.fromTo('.op-q .w > span', { yPercent: 110 }, { yPercent: 0, duration: 0.6, stagger: 0.07, ease: 'expo.out', immediateRender: true }, b(9));
+  tl.fromTo('.op-card', { autoAlpha: 0, y: 70, rotationX: 30, scale: 0.92 }, { autoAlpha: 1, y: 0, rotationX: 0, scale: 1, duration: 0.95, ease: 'expo.out' }, b(9) + 0.12);
+  tl.fromTo('.op-ui', { rotationX: 12, rotationY: -10, z: -90 }, { rotationX: 4, rotationY: 5, z: 0, duration: b(12) - b(9), ease: 'none', immediateRender: true }, b(9));
+  tl.fromTo('.op-chips span', { autoAlpha: 0, y: 12 }, { autoAlpha: 1, y: 0, stagger: 0.06, duration: 0.4 }, b(9.6));
+  const send = center(q('.op-send'));
+  tl.fromTo('.op-cursor', { autoAlpha: 0, x: vw * 0.92, y: vh * 0.96 }, { autoAlpha: 1, x: send.x - 6, y: send.y - 4, duration: 0.62, ease: 'power3.inOut' }, b(11.2));
+  tl.fromTo(['.op-cursor', '.op-send'], { scale: 1 }, { scale: 0.82, duration: 0.07, yoyo: true, repeat: 1, ease: 'power1.inOut' }, b(12) - 0.06);
+  hide(b(12) + 0.12, '.op-cursor', 0.15);
+  tl.fromTo('.op-ui', { rotationX: 4, rotationY: 5, rotationZ: 0, z: 0, scale: 1, autoAlpha: 1 },
+    { rotationX: 42, rotationY: -16, rotationZ: -7, z: -300, scale: 0.7, autoAlpha: 0, duration: 0.55, ease: 'power3.in' }, b(12) + 0.08);
+  // Beat 1 (9.17): the prompt becomes a glowing "analysing" pill; repositories gather around it.
+  tl.fromTo('.op-pill', { autoAlpha: 0, scaleX: 0.25, scaleY: 0.5 }, { autoAlpha: 1, scaleX: 1, scaleY: 1, duration: 0.42, ease: 'back.out(1.7)' }, b(13) - 0.24);
+  const repos = qa('.op-repo');
+  const rx = portrait ? vw * 0.36 : Math.min(vw * 0.36, 560), ry = vh * 0.3;
+  repos.forEach((el, i) => {
+    const a = -Math.PI / 2 + (i / repos.length) * Math.PI * 2;
+    const x = Math.cos(a) * rx, y = Math.sin(a) * ry;
+    tl.fromTo(el, { autoAlpha: 0, x: x * 1.5, y: y * 1.5, scale: 0.6 }, { autoAlpha: 1, x, y, scale: 1, duration: 0.45, ease: 'expo.out' }, b(13) + 0.04 + i * 0.022);
+    // Beat 2 (9.88): they are pulled into the pill.
+    tl.fromTo(el, { x, y, scale: 1, autoAlpha: 1 }, { x: 0, y: 0, scale: 0.15, autoAlpha: 0, duration: 0.34, ease: 'power3.in' }, b(14) - 0.08 + i * 0.026);
   });
-  tl.fromTo(cam, { scale: 1.07, rotation: -1.4, rotationX: 0 }, { scale: 1.34, rotation: 3, rotationX: 16 * k, duration: DROP - 11.0, ease: 'power2.in' }, 11.0);
-  tl.fromTo('.tr-grain', { opacity: 0.1 }, { opacity: 0.22, duration: DROP - 11.0, ease: 'none' }, 11.0);
-  tl.fromTo('.tr-dip', { autoAlpha: 0 }, { autoAlpha: 0.88, duration: 0.18, ease: 'power2.in' }, DROP - 0.2);
+  tl.fromTo('.op-pill', { scale: 1.14 }, { scale: 1, duration: 0.35 }, b(14) + 0.32);
+  // Beat 3 (10.59): the pill opens into a tilted results panel listing the projects.
+  hide(b(15) - 0.06, '.op-pill', 0.16, { scaleX: 1.8 });
+  tl.fromTo('.op-doc', { autoAlpha: 0, scaleX: 0.3, scaleY: 0.1, rotationX: 0, rotationY: 0 }, { autoAlpha: 1, scaleX: 1, scaleY: 1, rotationX: 14, rotationY: -18, duration: 0.5, ease: 'expo.out' }, b(15) - 0.06);
+  tl.fromTo('.op-doc li', { autoAlpha: 0, x: -14 }, { autoAlpha: 1, x: 0, stagger: 0.034, duration: 0.25 }, b(15) + 0.1);
+  tl.fromTo('.op-doc', { rotationX: 14, rotationY: -18 }, { rotationX: 6, rotationY: 12, duration: b(16) - b(15) - 0.44, ease: 'none' }, b(15) + 0.44);
+  // Beat 4 (11.29): the panel folds into a core of light that rushes the camera into the drop.
+  tl.fromTo('.op-doc', { scale: 1, autoAlpha: 1 }, { scale: 0.2, autoAlpha: 0, duration: 0.3, ease: 'power3.in' }, b(16) - 0.06);
+  tl.fromTo('.op-core', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, b(16) + 0.16);
+  tl.fromTo('.op-core', { scale: 1, rotation: 0 }, { scale: 16, rotation: 10, duration: DROP - b(16) - 0.4, ease: 'expo.in' }, b(16) + 0.4);
+  tl.fromTo('.x-flash', { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power2.in' }, DROP - 0.2);
+  [b(13), b(14), b(15), b(16)].forEach(t => punch(t, 1.035));
+  sceneOff('open', DROP);
 
-  // ── DROP (12.35): title slam, boxes pop outward, density map blooms, count rolls ──
-  tl.fromTo(cam, { scale: 1.34, rotation: 3, rotationX: 16 * k }, { scale: 1, rotation: 0, rotationX: 0, duration: 0.6, ease: 'expo.out' }, DROP);
-  tl.fromTo('.tr-dip', { autoAlpha: 0.88 }, { autoAlpha: 0, duration: 0.12 }, DROP);
-  tl.fromTo('.tr-grain', { opacity: 0.22 }, { opacity: 0.12, duration: 0.5 }, DROP);
-  flash(DROP, 0.75); shake(DROP, 22);
-  tl.fromTo('.tr-bars i', { scaleY: 0 }, { scaleY: 1, duration: 0.35, ease: 'expo.out' }, DROP);
-  section(DROP, 1);
-  const titleLines = all('.tr-title span');
-  tl.fromTo(titleLines, { autoAlpha: 0, yPercent: 60, scale: 1.45, fontVariationSettings: wdth(62) },
-    { autoAlpha: 1, yPercent: 0, scale: 1, fontVariationSettings: wdth(125), duration: 0.6, stagger: 0.07, ease: 'expo.out' }, DROP);
-  show(DROP + 0.05, '.tr-heat', 0.9, { scale: 0.75 }, { autoAlpha: 0.95, scale: 1, ease: 'expo.out' });
-  const boxes = all('.tr-box');
-  const dist = objects.map(o => Math.hypot(o.x - 500, o.y - 500));
-  const maxD = Math.max(...dist);
-  tl.fromTo(boxes, { autoAlpha: 0, scale: 1.7, transformOrigin: '50% 50%' }, { autoAlpha: 1, scale: 1, duration: 0.24, ease: 'back.out(2)', stagger: i => (dist[i] / maxD) * 1.1 }, DROP + 0.05);
-  const counter = { n: 0 };
-  const countEls = [one('.tr-count-n'), one('.tr-hud-count b')];
-  const writeCount = () => { const v = Math.round(counter.n); countEls[0].textContent = String(v); countEls[1].textContent = String(v).padStart(2, '0'); };
-  tl.fromTo(counter, { n: 0 }, { n: objects.length, duration: 1.9, ease: 'power2.inOut', onUpdate: writeCount }, DROP + 0.1);
+  // ── 01 DENSE OBJECT COUNTER (12.0 – 14.82) ─────────────────
+  sceneOn('counter', DROP);
+  tl.fromTo('.x-flash', { opacity: gentle ? 0.35 : 1 }, { opacity: 0, duration: 0.55, ease: 'power2.out' }, DROP);
+  shake(DROP, 18);
+  const cnTitle = qa('.cn-title span');
+  tl.fromTo(cnTitle, { autoAlpha: 0, yPercent: 70, scale: 1.45, fontVariationSettings: wdth(62) },
+    { autoAlpha: 1, yPercent: 0, scale: 1, fontVariationSettings: wdth(125), duration: 0.62, stagger: 0.07, ease: 'expo.out', immediateRender: true }, DROP + 0.02);
+  kick('counter', DROP + 0.2);
   [b(18), b(19), b(20)].forEach(t => {
-    punch(t, 1.05);
-    tl.fromTo(titleLines, { fontVariationSettings: wdth(100) }, { fontVariationSettings: wdth(125), duration: 0.35, ease: 'expo.out', stagger: 0.03 }, t);
-  });
-  tl.fromTo(titleLines, { x: 0, autoAlpha: 1 }, { x: i => (i % 2 ? 1 : -1) * vw * 0.7, autoAlpha: 0, duration: 0.42, ease: 'power3.in', stagger: 0.04 }, b(20) + 0.3);
-
-  // ── Pipeline, one step per beat (15.24 – 20.3) ──────────────
-  const stepNames = all('.tr-sn'), stepItems = all('.tr-steps li');
-  show(b(21), '.tr-steps', 0.4, { y: 24 }, { y: 0 });
-  const step = (i: number, t: number) => {
-    if (i > 0) hide(t, stepNames[i - 1], 0.08, { x: -50 });
-    show(t + 0.07, stepNames[i], 0.35, { x: 60, fontVariationSettings: wdth(62) }, { x: 0, fontVariationSettings: wdth(125), ease: 'expo.out' });
-    tl.fromTo(stepItems[i], { color: '#6f6880', borderColor: 'rgba(236,233,242,.18)' }, { color: '#fca50a', borderColor: '#fca50a', duration: 0.2 }, t);
-    if (i > 0) tl.fromTo(stepItems[i - 1], { color: '#fca50a', borderColor: '#fca50a' }, { color: '#bdb6cc', borderColor: 'rgba(236,233,242,.32)', duration: 0.2 }, t);
     punch(t, 1.04);
-  };
-  const wrap = one('.tr-field-wrap');
-  // 1 Kamera: the frame reads as a phone screen, then a snapshot flash ("HITUNG").
-  step(0, b(21));
-  tl.fromTo('.tr-frame', { strokeWidth: 3 }, { strokeWidth: 14, duration: 0.3 }, b(21));
-  tl.fromTo('.tr-snap', { autoAlpha: 0.95 }, { autoAlpha: 0, duration: 0.45, ease: 'power2.out' }, b(21.5));
-  // 2 ROI: outside darkens, inside pulses.
-  step(1, b(22));
-  tl.fromTo('.tr-frame', { strokeWidth: 14 }, { strokeWidth: 3, duration: 0.3 }, b(22));
-  tl.fromTo('.tr-roi-mask', { autoAlpha: 0.6 }, { autoAlpha: 0.88, duration: 0.3 }, b(22));
-  tl.fromTo('.tr-roi', { strokeWidth: 4 }, { strokeWidth: 10, duration: 0.15, yoyo: true, repeat: 1 }, b(22));
-  // 3 Tile: zoom into the centre tile; all tiles flash.
-  step(2, b(23));
-  tl.fromTo(tileHi, { autoAlpha: 0.6 }, { autoAlpha: 0, duration: 0.35, stagger: 0.03 }, b(23));
-  tl.fromTo(wrap, { scale: 1 }, { scale: 1.55, duration: 0.55, ease: 'expo.inOut' }, b(23));
-  // 4 YOLO: boxes re-detect inside the tile.
-  step(3, b(24));
-  tl.fromTo(boxes, { autoAlpha: 0, scale: 1.5 }, { autoAlpha: 1, scale: 1, duration: 0.2, stagger: i => pseudo(i, 6) * 0.45, ease: 'back.out(2)' }, b(24));
-  // 5 NMS: duplicates on the seams collapse into one box.
-  step(4, b(25));
-  tl.fromTo(wrap, { scale: 1.55 }, { scale: 1.12, duration: 0.5, ease: 'expo.inOut' }, b(25));
-  show(b(25), '.tr-dups', 0.12);
-  const dupRects = all('.tr-dup rect');
-  tl.fromTo(dupRects, { x: 0, y: 0, autoAlpha: 1 }, { x: i => (i % 2 ? -7 : 7), y: i => (i % 2 ? -4 : 4), autoAlpha: 0, duration: 0.4, ease: 'power2.in' }, b(25) + 0.3);
-  hide(b(25) + 0.7, '.tr-dups', 0.01);
-  // 6 Hitung: the field steps back, the count takes the screen; JSON result slides in.
-  step(5, b(26));
-  tl.fromTo(wrap, { scale: 1.12, autoAlpha: 1 }, { scale: 0.92, autoAlpha: 0.22, duration: 0.45 }, b(26));
-  show(b(26), '.tr-count', 0.45, { scale: 1.35 }, { scale: 1, ease: 'expo.out' });
-  tl.fromTo(counter, { n: 0 }, { n: objects.length, duration: 0.55, ease: 'power3.out', onUpdate: writeCount }, b(26));
-  flash(b(26), 0.4); shake(b(26), 12);
-  show(b(27), '.tr-json', 0.4, { x: mobile ? 0 : 80, y: mobile ? 40 : 0 }, { x: 0, y: 0 });
-  punch(b(27), 1.03);
-  // Bass break (≈20.0 – 20.5): glitch, cut to black, a breath.
-  tl.fromTo('.tr-count', { x: 0, skewX: 0 }, { x: () => 18 * k, skewX: 14 * k, duration: 0.05, yoyo: true, repeat: 5, ease: 'steps(1)' }, 19.98);
-  hide(b(28), ['.tr-count', '.tr-json', '.tr-steps', stepNames[5]], 0.08);
-  hide(b(28), '.tr-field-layer', 0.08);
-  hide(b(28), '.tr-heat', 0.08);
-  tl.fromTo('.tr-dip', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.05 }, b(28));
-  show(b(28) + 0.08, '.tr-breath', 0.25, { y: 10 }, { y: 0 });
-  hide(b(29) - 0.12, '.tr-breath', 0.1);
-  tl.fromTo('.tr-dip', { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.1 }, b(29));
+    tl.fromTo(cnTitle, { fontVariationSettings: wdth(95) }, { fontVariationSettings: wdth(125), duration: 0.35, stagger: 0.03, ease: 'expo.out' }, t);
+  });
+  qa('.cn-steps li').forEach((el, i) => show([b(17.6), b(18), b(19), b(19.5)][i], el, 0.32, { x: -24 }, { x: 0, ease: 'expo.out' }));
+  show(b(19) - 0.04, '.cn-count', 0.35, { scale: 1.3, transformOrigin: '100% 0%' }, { scale: 1, ease: 'expo.out' });
+  show(b(20) + 0.3, '.cn-cam', 0.3, { y: 10 }, { y: 0 });
+  show(b(20) + 0.42, '.cn-json', 0.35, { y: 20 }, { y: 0 });
+  hide(b(20.6), ['.cn-head', '.cn-steps', '.cn-count', '.cn-cam', '.cn-json'], 0.24, { scale: 1.08, filter: 'blur(8px)' }, { scale: 1, filter: 'blur(0px)' });
+  const dive = subject('counter');
+  const irisAt = `${(dive.x / vw) * 100}% ${(dive.y / vh) * 100}%`;
+  tl.fromTo('.x-iris', { autoAlpha: 1, clipPath: `circle(0% at ${irisAt})` }, { clipPath: `circle(150% at ${irisAt})`, duration: 0.34, ease: 'expo.in' }, b(21) - 0.32);
+  sceneOff('counter', b(21));
 
-  // ── Other ML projects, two beats each (21.03 – 26.81) ────────
-  section(b(29), 2);
-  const vig = (cls: string, t: number, inner: (t: number) => void) => {
-    const el = one(`.tr-v-${cls}`);
-    tl.fromTo(el, { autoAlpha: 0, x: vw * 0.35, rotationY: -28 * k, filter: 'blur(10px)' }, { autoAlpha: 1, x: 0, rotationY: 0, filter: 'blur(0px)', duration: 0.42, ease: 'expo.out' }, t);
-    tl.fromTo(el.querySelector('.tr-v-cap h3'), { fontVariationSettings: wdth(62), yPercent: 40 }, { fontVariationSettings: wdth(125), yPercent: 0, duration: 0.6, ease: 'expo.out' }, t + 0.05);
-    flash(t, 0.35); punch(t, 1.05);
-    inner(t);
-    tl.fromTo(el, { autoAlpha: 1, x: 0, filter: 'blur(0px)' }, { autoAlpha: 0, x: -vw * 0.35, filter: 'blur(10px)', duration: 0.3, ease: 'power3.in' }, t + BEATS2 - 0.3);
-  };
-  const BEATS2 = 2 * (b(1) - b(0));
-  vig('inner', b(29), t => {
-    tl.fromTo('.tr-in-word', { x: -120, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.25, stagger: 0.04 }, t);
-    tl.fromTo('.tr-in-word', { x: 0, autoAlpha: 1, scale: 1 }, { x: 380, autoAlpha: 0, scale: 0.4, duration: 0.35, stagger: 0.035, ease: 'power3.in' }, t + 0.35);
-    tl.fromTo('.tr-in-orb', { scale: 0.6, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.5, ease: 'elastic.out(1, .4)' }, t + 0.55);
-    tl.fromTo('.tr-in-fn', { autoAlpha: 0.15 }, { autoAlpha: 1, duration: 0.12, stagger: 0.07 }, t + 0.72);
+  // ── 02 INNERSELF (14.82 – 16.94) ─────────────────────────────
+  sceneOn('innerself', b(21));
+  hide(b(21) + 0.02, '.x-iris', 0.3);
+  tl.fromTo('.in-title .ic', { autoAlpha: 0, yPercent: 90, rotation: 14, fontVariationSettings: "'SOFT' 0, 'WONK' 0, 'opsz' 144, 'wght' 180" },
+    { autoAlpha: 1, yPercent: 0, rotation: 0, fontVariationSettings: "'SOFT' 100, 'WONK' 1, 'opsz' 144, 'wght' 420", stagger: 0.035, duration: 0.7, ease: 'expo.out', immediateRender: true }, b(21) + 0.04);
+  kick('innerself', b(21) + 0.1);
+  tl.fromTo('.in-sub', { autoAlpha: 0, letterSpacing: '1.4em' }, { autoAlpha: 1, letterSpacing: '0.6em', duration: 0.7, ease: 'expo.out', immediateRender: true }, b(21) + 0.3);
+  const orb = subject('innerself');
+  qa('.in-r').forEach((el, i) => {
+    show(b(21.4) + i * 0.05, el, 0.3, { scale: 0.7, y: 14 }, { scale: 1, y: 0, ease: 'back.out(2)' });
+    const c = center(el);
+    tl.fromTo(el, { x: 0, y: 0, scale: 1, autoAlpha: 1 }, { x: orb.x - c.x, y: orb.y - c.y, scale: 0.15, autoAlpha: 0, duration: 0.4, ease: 'power3.in' }, b(22) - 0.1 + i * 0.06);
   });
-  vig('trash', b(31), t => {
-    tl.fromTo('.tr-st-scan', { y: 0 }, { y: 480, duration: 0.6, ease: 'power1.inOut' }, t);
-    show(t + 0.36, '.tr-st-tag', 0.2, { scale: 1.5, transformOrigin: '50% 50%' }, { scale: 1, ease: 'back.out(2)' });
-    tl.fromTo('.tr-st-servo', { rotation: 0, svgOrigin: '500 745' }, { rotation: 38, svgOrigin: '500 745', duration: 0.3, ease: 'back.out(2)' }, t + BEATS2 / 2);
-  });
-  vig('face', b(33), t => {
-    tl.fromTo('.tr-fc-mesh', { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.5, ease: 'power2.out' }, t);
-    tl.fromTo('.tr-fc-dot', { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.2, stagger: 0.012, ease: 'back.out(3)' }, t);
-    [0.36, 0.55].forEach(d => tl.fromTo('.tr-fc-eye', { scaleY: 1, transformOrigin: '50% 50%' }, { scaleY: 0.1, duration: 0.06, yoyo: true, repeat: 1, ease: 'power1.inOut' }, t + d));
-    show(t + BEATS2 / 2, '.tr-fc-lock', 0.25, { scale: 1.3, transformOrigin: '50% 50%' }, { scale: 1, ease: 'expo.out' });
-    show(t + BEATS2 / 2 + 0.1, '.tr-fc-tag', 0.2, { y: 20 }, { y: 0 });
-  });
-  vig('hand', b(35), t => {
-    tl.fromTo('.tr-hd-bones', { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.45, ease: 'power2.out' }, t);
-    tl.fromTo('.tr-hd-pt', { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.18, stagger: 0.015, ease: 'back.out(3)' }, t + 0.05);
-    tl.fromTo('.tr-hd-pt', { fill: '#fca50a' }, { fill: '#fcffa4', duration: 0.1, yoyo: true, repeat: 3 }, 25.62);
-    show(t + BEATS2 / 2, '.tr-hd-win', 0.3, { scale: 0.6, transformOrigin: '0% 50%' }, { scale: 1, ease: 'back.out(1.8)' });
-    show(t + BEATS2 / 2, '.tr-hd-arrow', 0.2);
-  });
+  show(b(22) + 0.25, '.in-model', 0.35, { y: 12 }, { y: 0 });
+  hide(b(23) - 0.08, '.in-model', 0.16);
+  show(b(23), '.in-result', 0.01);
+  tl.fromTo('.in-stack > *', { autoAlpha: 0, yPercent: 60, scale: 0.8 }, { autoAlpha: 1, yPercent: 0, scale: 1, stagger: 0.045, duration: 0.42, ease: 'back.out(2)' }, b(23));
+  show(b(23) + 0.3, '.in-facts', 0.3);
+  punch(b(22), 1.035); punch(b(23), 1.05); flash(b(23), 0.18);
+  hide(b(24) - 0.3, '.fg-innerself > *', 0.24, { filter: 'blur(10px)', scale: 0.96 }, { filter: 'blur(0px)', scale: 1 });
+  sceneOff('innerself', b(24));
 
-  // ── From data to model (26.81 – 29.71) ──────────────────────
-  section(b(37), 3);
-  show(b(37), '.tr-field-layer', 0.01);
-  tl.fromTo(wrap, { autoAlpha: 0, scale: 0.8 }, { autoAlpha: 1, scale: 0.92, duration: 0.35, ease: 'expo.out' }, b(37));
-  hide(b(37), ['.tr-boxes', '.tr-tiles', '.tr-roi', '.tr-roi-mask'], 0.01);
-  show(b(37), '.tr-annots', 0.01);
-  show(b(37) + 0.05, '.tr-annot-label', 0.3, { y: -16 }, { y: 0 });
-  flash(b(37), 0.3); punch(b(37), 1.04);
-  const targets = [objects[3], objects[17], objects[29]];
-  tl.fromTo('.tr-cursor', { x: 920, y: 980, autoAlpha: 1 }, { x: targets[0].x - targets[0].r - 8, y: targets[0].y - targets[0].r - 8, duration: 0.18, ease: 'power2.inOut' }, b(37) + 0.02);
-  const annots = all('.tr-annot');
-  targets.forEach((o, i) => {
-    const t0 = b(37) + 0.2 + i * 0.17;
-    if (i > 0) tl.fromTo('.tr-cursor', { x: targets[i - 1].x + targets[i - 1].r + 8, y: targets[i - 1].y + targets[i - 1].r + 8 }, { x: o.x - o.r - 8, y: o.y - o.r - 8, duration: 0.08 }, t0 - 0.08);
-    tl.fromTo(annots[i], { autoAlpha: 1, strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.12, ease: 'none' }, t0);
-    tl.fromTo('.tr-cursor', { x: o.x - o.r - 8, y: o.y - o.r - 8 }, { x: o.x + o.r + 8, y: o.y + o.r + 8, duration: 0.1, ease: 'power1.inOut' }, t0);
-  });
-  hide(b(38), ['.tr-field-layer', '.tr-annot-label'], 0.15);
-  show(b(38), '.tr-wf-split', 0.25, { y: 30 }, { y: 0 }); punch(b(38), 1.04);
-  tl.fromTo('.tr-split span', { flexGrow: 1, marginRight: 0 }, { flexGrow: (i: number) => [7, 2, 1][i], marginRight: (i: number) => (i < 2 ? 10 : 0), duration: 0.45, ease: 'expo.out' }, b(38) + 0.1);
-  hide(b(39), '.tr-wf-split', 0.12);
-  show(b(39), '.tr-wf-train', 0.25, { y: 30 }, { y: 0 }); punch(b(39), 1.04);
-  tl.fromTo('.tr-curve-line', { strokeDashoffset: 100 }, { strokeDashoffset: 0, duration: 0.62, ease: 'power2.out' }, b(39) + 0.05);
-  hide(b(40), '.tr-wf-train', 0.12);
-  show(b(40), '.tr-wf-eval', 0.25, { y: 30 }, { y: 0 }); punch(b(40), 1.04);
-  tl.fromTo('.tr-eval span', { autoAlpha: 0.2, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.18, stagger: 0.09, ease: 'back.out(2)' }, b(40) + 0.08);
-  hide(b(41) - 0.08, '.tr-wf-eval', 0.08);
+  // ── 03 VOICE DATASET (16.94 – 18.35) ────────────────────────
+  sceneOn('voice', b(24));
+  tl.fromTo('.vo-wave', { y: portrait ? -(0.7 - 0.57) * vh : -(0.73 - 0.5) * vh, scaleX: 0.45 }, { y: 0, scaleX: 1, duration: 0.55, ease: 'expo.out' }, b(24));
+  tl.fromTo('.vo-t1', { autoAlpha: 0, yPercent: 90, fontWeight: 100 }, { autoAlpha: 1, yPercent: 0, fontWeight: 900, duration: 0.6, ease: 'expo.out', immediateRender: true }, b(24) + 0.04);
+  tl.fromTo('.vo-t2', { autoAlpha: 0, yPercent: 90, fontWeight: 100 }, { autoAlpha: 1, yPercent: 0, fontWeight: 900, duration: 0.6, ease: 'expo.out', immediateRender: true }, b(24) + 0.14);
+  kick('voice', b(24) + 0.12);
+  show(b(24) + 0.22, '.vo-rec', 0.3, { x: 20 }, { x: 0 });
+  tl.fromTo('.vo-specs span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.05, duration: 0.3 }, b(24.5));
+  tl.fromTo('.vo-pipe li', { autoAlpha: 0, x: 18 }, { autoAlpha: 1, x: 0, stagger: 0.05, duration: 0.3 }, b(25) - 0.05);
+  punch(b(25), 1.04);
+  tl.fromTo('.vo-t1', { scaleY: 1.18, transformOrigin: '0% 100%' }, { scaleY: 1, duration: 0.3 }, b(25));
+  // Bars rise and become green stripes: wipe to Smart Trash.
+  show(b(26) - 0.24, '.x-bars', 0.01);
+  tl.fromTo('.x-bars i', { scaleY: 0, transformOrigin: '50% 100%' }, { scaleY: 1, transformOrigin: '50% 100%', duration: 0.22, ease: 'power3.in', stagger: { each: 0.01, from: 'center' } }, b(26) - 0.24);
+  sceneOff('voice', b(26));
 
-  // ── Stack flashes on half beats, then everything collapses into one point (29.71 – 31.9) ──
-  section(b(41), 4);
-  const stackEls = all('.tr-stack span');
-  const half = (b(1) - b(0)) / 2;
-  show(b(41), '.tr-stack', 0.01);
-  stackEls.forEach((el, i) => {
-    const t = b(41) + i * half;
-    tl.fromTo(el, { autoAlpha: 0, scale: 1.4, fontVariationSettings: wdth(62) }, { autoAlpha: 1, scale: 1, fontVariationSettings: wdth(125), duration: 0.16, ease: 'expo.out' }, t);
-    if (i < stackEls.length - 1) hide(t + half - 0.04, el, 0.04);
-    flash(t, 0.22); punch(t, 1.04);
-  });
-  const last = stackEls[stackEls.length - 1];
-  tl.fromTo(last, { scaleX: 1, scaleY: 1 }, { scaleX: 0.02, scaleY: 0.02, duration: 0.45, ease: 'expo.in' }, 31.35);
-  tl.fromTo(core, { autoAlpha: 0, scale: 0.4 }, { autoAlpha: 1, scale: 1.6, duration: 0.25, ease: 'back.out(3)' }, 31.75);
+  // ── 04 SMART TRASH (18.35 – 20.47) ──────────────────────────
+  sceneOn('trash', b(26));
+  tl.fromTo('.x-bars i', { scaleY: 1, transformOrigin: '50% 0%' }, { scaleY: 0, transformOrigin: '50% 0%', duration: 0.34, ease: 'expo.out', stagger: { each: 0.012, from: 'edges' } }, b(26) + 0.02);
+  hide(b(26) + 0.5, '.x-bars', 0.01);
+  tl.fromTo('.t4-title span', { autoAlpha: 0, x: -70, skewX: -14 }, { autoAlpha: 1, x: 0, skewX: 0, stagger: 0.08, duration: 0.5, ease: 'expo.out', immediateRender: true }, b(26) + 0.06);
+  tl.fromTo('.t4-tape', { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'expo.out', immediateRender: true }, b(26) + 0.24);
+  kick('trash', b(26) + 0.16);
+  tl.fromTo('.t4-flow li', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.05, duration: 0.25 }, b(26.5));
+  qa('.t4-flow li').forEach((el, i) => tl.fromTo(el, { backgroundColor: 'rgba(198,244,50,0)', color: '#e9ffc0' }, { backgroundColor: 'rgba(198,244,50,1)', color: '#08170d', duration: 0.1 }, b(26.55) + i * 0.08));
+  show(b(26.6), '.t4-blynk', 0.3, { y: -10 }, { y: 0 });
+  show(b(27), '.t4-l', 0.3, { x: -50, scale: 1.3 }, { x: 0, scale: 1, ease: 'expo.out' });
+  hide(b(28) - 0.06, '.t4-l', 0.12);
+  show(b(28), '.t4-r', 0.3, { x: 50, scale: 1.3 }, { x: 0, scale: 1, ease: 'expo.out' });
+  punch(b(27), 1.05); shake(b(28), 12); punch(b(28), 1.06);
+  // Bass cut (19.9): CRT switch-off to a single dot.
+  tl.fromTo(screen, { scaleY: 1 }, { scaleY: 0.006, duration: 0.12, ease: 'power3.in' }, BREAKS[0]);
+  tl.fromTo(screen, { scaleX: 1 }, { scaleX: 0, duration: 0.14, ease: 'power3.in' }, BREAKS[0] + 0.13);
+  show(BREAKS[0] + 0.2, '.x-dot', 0.06);
+  sceneOff('trash', BREAKS[0] + 0.28);
+  tl.fromTo(screen, { scaleX: 0, scaleY: 0.006 }, { scaleX: 1, scaleY: 1, duration: 0.01 }, b(29) - 0.02);
 
-  // ── Name (31.88 → 32.60 slam), two closing hits, fade (33.7 – 34.64) ──
-  show(b(44), '.tr-outro', 0.01);
-  const nameLines = all('.tr-name span');
-  tl.fromTo(nameLines, { autoAlpha: 0, scale: 0.15, letterSpacing: '0.6em', fontVariationSettings: wdth(62) },
-    { autoAlpha: 1, scale: 1, letterSpacing: '-0.01em', fontVariationSettings: wdth(125), duration: b(45) - b(44), ease: 'expo.in', stagger: 0.06 }, b(44));
-  hide(b(45), core, 0.1);
-  flash(b(45), 0.85); shake(b(45), 24);
-  show(b(45) + 0.15, '.tr-role', 0.35, { y: 16 }, { y: 0 });
-  show(b(45) + 0.3, '.tr-link', 0.35, { y: 16 }, { y: 0 });
-  show(b(45), '.tr-heat', 0.6, { scale: 1.6 }, { autoAlpha: 0.55, scale: 1.25 });
-  [33.22, 33.33].forEach((t, i) => {
-    tl.fromTo(nameLines, { x: 0, skewX: 0 }, { x: () => (i ? -12 : 12) * k, skewX: (i ? -10 : 10) * k, duration: 0.04, yoyo: true, repeat: 1, ease: 'steps(1)' }, t);
-    flash(t, 0.3);
-  });
-  tl.fromTo(['.tr-cam', '.tr-hud', '.tr-steps-names'], { autoAlpha: 1 }, { autoAlpha: 0, duration: DURATION - 33.75, ease: 'power1.in' }, 33.75);
+  // ── 05 FACE RECOGNITION (20.47 – 22.58) ─────────────────────
+  sceneOn('face', b(29));
+  hide(b(29) + 0.02, '.x-dot', 0.08);
+  tl.fromTo('.fc-scan', { autoAlpha: 1, x: vw * 0.5, scaleY: 0 }, { scaleY: 1, duration: 0.14, ease: 'expo.out' }, b(29));
+  tl.fromTo('.fc-scan', { x: vw * 0.5 }, { x: vw * 0.98, duration: 0.5, ease: 'power2.inOut' }, b(29) + 0.14);
+  hide(b(29) + 0.62, '.fc-scan', 0.1);
+  show(b(29) + 0.06, '.fc-title span', 0.2);
+  kick('face', b(29) + 0.15);
+  show(b(29) + 0.25, '.fc-frame', 0.4, { scale: 1.35 }, { scale: 1, ease: 'expo.out' });
+  show(b(30), '.fc-stack', 0.35, { y: 10 }, { y: 0 });
+  show(b(30.5) + 0.06, '.fc-live', 0.25, { x: -14 }, { x: 0 });
+  show(b(31), '.fc-ok', 0.32, { scale: 0.85, x: -20 }, { scale: 1, x: 0, ease: 'back.out(2)' });
+  tl.fromTo('.fc-frame i', { borderColor: '#5ff3ff' }, { borderColor: '#8cffbe', duration: 0.15 }, b(31));
+  punch(b(30), 1.035); punch(b(31), 1.05); flash(b(31), 0.16);
+  // b32: points fly into a hand; the hot gradient bursts out from the face.
+  hide(b(32) - 0.05, '.fg-face > *', 0.18);
+  const face = subject('face');
+  const at = `${(face.x / vw) * 100}% ${(face.y / vh) * 100}%`;
+  tl.fromTo('.bg-hand', { autoAlpha: 1, clipPath: `circle(0% at ${at})` }, { clipPath: `circle(150% at ${at})`, duration: 0.5, ease: 'expo.inOut' }, b(32));
+  tl.fromTo('.fg-hand', { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.01 }, b(32));
+  sceneOff('face', b(32) + 0.5);
 
-  // Timecode in the HUD follows the playhead.
-  const tc = one('.tr-tc');
+  // ── 06 HAND GESTURE (22.58 – 24.70) ─────────────────────────
+  tl.fromTo('.hd-title .hc', { autoAlpha: 0, yPercent: 130, rotation: (i: number) => (i % 2 ? 16 : -16) }, { autoAlpha: 1, yPercent: 0, rotation: 0, stagger: 0.035, duration: 0.55, ease: 'back.out(2.4)', immediateRender: true }, b(32) + 0.22);
+  kick('hand', b(32) + 0.3);
+  const gestures = [b(33), b(33.5), b(34), b(34.5)];
+  const chips = qa('.hd-chip');
+  const titleSize = portrait ? vw * 0.134 : Math.min(vw * 0.078, vh * 0.13);
+  gestures.forEach((t, i) => {
+    tl.fromTo('.hd-title .hc', { y: 0 }, { y: -0.12 * titleSize, duration: 0.11, yoyo: true, repeat: 1, stagger: 0.014, ease: 'power2.out' }, t);
+    show(t, chips[i], 0.22, { scale: 0.55, rotation: -8 }, { scale: 1, rotation: 0, ease: 'back.out(2.6)' });
+    if (i < 3) hide(gestures[i + 1] - 0.04, chips[i], 0.08, { scale: 0.8 });
+    punch(t, i % 2 ? 1.03 : 1.045);
+  });
+  show(b(33) + 0.1, '.hd-facts', 0.3, { y: 10 }, { y: 0 });
+  hide(b(35) - 0.2, '.fg-hand > *', 0.12, { x: vw * 0.06 });
+  tl.fromTo('.x-swipe', { autoAlpha: 1, xPercent: -120, skewX: -12 }, { xPercent: 0, duration: 0.2, ease: 'power3.in' }, b(35) - 0.2);
+  sceneOff('hand', b(35));
+
+  // ── 07 STOCK RECORDING (24.70 – 26.11) ──────────────────────
+  sceneOn('stock', b(35));
+  tl.fromTo('.x-swipe', { xPercent: 0 }, { xPercent: 125, duration: 0.3, ease: 'power3.out' }, b(35) + 0.01);
+  hide(b(35) + 0.32, '.x-swipe', 0.01);
+  tl.fromTo('.st-title span', { autoAlpha: 0, scaleY: 0, transformOrigin: '50% 100%' }, { autoAlpha: 1, scaleY: 1, stagger: 0.08, duration: 0.45, ease: 'expo.out', immediateRender: true }, b(35) + 0.08);
+  kick('stock', b(35) + 0.16);
+  show(b(35) + 0.12, '.st-label', 0.45, { y: 80, rotation: -14 }, { y: 0, rotation: 0, ease: 'expo.out' });
+  const labelH = q('.st-label').getBoundingClientRect().height;
+  tl.fromTo('.st-laser', { y: 0 }, { y: labelH * 0.62, duration: 0.24, yoyo: true, repeat: 3, ease: 'sine.inOut' }, b(35) + 0.3);
+  ['.st-s1', '.st-s2', '.st-s3'].forEach((s, i) => tl.fromTo(s, { color: 'rgba(255,255,255,0.22)' }, { color: i === 2 ? '#7dff6b' : '#ffd60a', duration: 0.1 }, b(35.5) + i * (B * 0.25)));
+  tl.fromTo('.st-tech span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.07, duration: 0.25 }, b(35.6));
+  tl.fromTo('.st-stamp', { autoAlpha: 0, scale: 2.8 }, { autoAlpha: 1, scale: 1, duration: 0.16, ease: 'power4.in' }, b(36) - 0.14);
+  shake(b(36), 16); punch(b(36), 1.05);
+  // Bass cut (25.5): pixel staircase into paper.
+  show(BREAKS[1], '.x-pix', 0.01);
+  const pix = qa('.x-pix i');
+  tl.fromTo(pix, { scale: 0 }, { scale: 1.04, duration: 0.12, ease: 'power2.out', stagger: (i: number) => ((i % 12) + Math.floor(i / 12)) * 0.024 }, BREAKS[1]);
+  sceneOff('stock', b(37) - 0.04);
+
+  // ── 08 PAYROLL (26.11 – 28.23) ──────────────────────────────
+  sceneOn('payroll', b(37) - 0.03);
+  tl.fromTo(pix, { scale: 1.04 }, { scale: 0, duration: 0.1, ease: 'power2.in', stagger: (i: number) => (18 - (i % 12) - Math.floor(i / 12)) * 0.011 }, b(37) - 0.06);
+  hide(b(37) + 0.3, '.x-pix', 0.01);
+  tl.fromTo('.pr-a', { autoAlpha: 0, yPercent: 80 }, { autoAlpha: 1, yPercent: 0, duration: 0.5, ease: 'expo.out', immediateRender: true }, b(37) + 0.05);
+  tl.fromTo('.pr-b', { autoAlpha: 1, clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.55, ease: 'power3.inOut', immediateRender: true }, b(37) + 0.22);
+  kick('payroll', b(37) + 0.1);
+  tl.fromTo('.pr-slip', { clipPath: 'inset(0% 0% 100% 0%)', y: -24 }, { clipPath: 'inset(0% 0% 0% 0%)', y: 0, duration: 0.65, ease: 'power2.out' }, b(37) + 0.3);
+  tl.fromTo('.pr-card', { autoAlpha: 0, y: 24, scale: 0.8 }, { autoAlpha: 1, y: 0, scale: 1, stagger: 0.06, duration: 0.3, ease: 'back.out(2)' }, b(38) - 0.06);
+  show(b(38) + 0.25, '.pr-tags', 0.3);
+  punch(b(38), 1.035);
+  tl.fromTo('.pr-total', { y: 0, scale: 1 }, { y: -vh * 0.45, scale: 0.5, autoAlpha: 0, duration: 0.3, ease: 'power3.in' }, b(39) - 0.3);
+  tl.fromTo('.x-sheet', { autoAlpha: 1, yPercent: 102 }, { yPercent: 0, duration: 0.3, ease: 'power3.in' }, b(39) - 0.3);
+  sceneOff('payroll', b(39));
+
+  // ── 09 LAPTOP BST (27.52 – 28.94) ───────────────────────────
+  sceneOn('laptop', b(39));
+  hide(b(39) + 0.01, '.x-sheet', 0.01);
+  tl.fromTo('.lp-title span', { autoAlpha: 0, x: -30 }, { autoAlpha: 1, x: 0, stagger: 0.08, duration: 0.4, ease: 'expo.out', immediateRender: true }, b(39) + 0.03);
+  kick('laptop', b(39) + 0.1);
+  show(b(39) + 0.25, '.lp-sub', 0.3);
+  [0, 1, 2, 3].forEach(d => {
+    tl.fromTo(`.lp-node.d${d}`, { autoAlpha: 0, scale: 0.2, transformOrigin: '50% 50%' }, { autoAlpha: 1, scale: 1, duration: 0.28, ease: 'back.out(2.4)', stagger: 0.02 }, b(39) + 0.06 + d * 0.09);
+  });
+  qa('.lp-edge').forEach(el => {
+    const d = Math.round(parseFloat(el.getAttribute('y2') || '0') / 1.1);
+    tl.fromTo(el, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.12, ease: 'none' }, b(39) + 0.02 + (d - 1) * 0.09);
+  });
+  show(b(39.6), '.lp-range', 0.25);
+  tl.fromTo('.lp-range i', { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: 'expo.out' }, b(39.6));
+  tl.fromTo('.lp-node.in circle', { fill: '#0d3b8c' }, { fill: '#ffd60a', duration: 0.12, stagger: 0.03 }, b(40));
+  tl.fromTo('.lp-node.in text', { fill: '#ffffff' }, { fill: '#0d3b8c', duration: 0.12, stagger: 0.03 }, b(40));
+  tl.fromTo('.lp-node.out', { opacity: 1 }, { opacity: 0.25, duration: 0.2 }, b(40));
+  tl.fromTo('.lp-edge.in', { stroke: '#dbe9ff' }, { stroke: '#ffd60a', duration: 0.15 }, b(40));
+  tl.fromTo('.lp-filters span', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, stagger: 0.05, duration: 0.25 }, b(40) + 0.12);
+  punch(b(40), 1.04);
+  show(b(41) - 0.34, '.x-mosaic', 0.01);
+  const mosaic = qa('.x-mosaic i');
+  const order = mosaic.map((_, i) => hash(i + 3));
+  tl.fromTo(mosaic, { opacity: 0 }, { opacity: 1, duration: 0.04, ease: 'steps(1)', stagger: (i: number) => order[i] * 0.3 }, b(41) - 0.34);
+  sceneOff('laptop', b(41));
+
+  // ── 10 MATH GAME (28.94 – 30.35) ────────────────────────────
+  sceneOn('math', b(41));
+  tl.fromTo(mosaic, { opacity: 1 }, { opacity: 0, duration: 0.04, ease: 'steps(1)', stagger: (i: number) => (1 - order[i]) * 0.26 }, b(41) + 0.02);
+  hide(b(41) + 0.34, '.x-mosaic', 0.01);
+  tl.fromTo('.mt-title', { autoAlpha: 0, scale: 0.2 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'steps(5)', immediateRender: true }, b(41) + 0.04);
+  show(b(41) + 0.2, '.mt-kick', 0.2, {}, { ease: 'steps(3)' });
+  show(b(41) + 0.1, '.mt-hud', 0.2, {}, { ease: 'steps(3)' });
+  tl.fromTo('.mt-eq', { autoAlpha: 1, clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.3, ease: 'steps(6)', immediateRender: true }, b(41) + 0.12);
+  tl.fromTo('.mt-a', { scale: 1.6 }, { scale: 1, duration: 0.2, ease: 'steps(3)' }, b(41.6));
+  show(b(41.6) + 0.04, '.mt-ok', 0.16, { y: 10 }, { y: 0, ease: 'steps(3)' });
+  hide(b(42.6), '.mt-ok', 0.1);
+  tl.fromTo('.mt-timer i', { scaleX: 1 }, { scaleX: 0.3, duration: b(43) - b(41), ease: 'none' }, b(41));
+  const lvColors = ['#7dff6b', '#2bf6ff', '#ff2bd6'];
+  qa('.mt-levels span').forEach((el, i) => tl.fromTo(el, { borderColor: '#3a3a46', color: '#6a6a7a' }, { borderColor: lvColors[i], color: lvColors[i], duration: 0.08 }, b(42) + i * B * 0.33));
+  tl.fromTo('.mt-ops span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.06, duration: 0.12, ease: 'steps(2)', immediateRender: true }, b(42.2));
+  tl.fromTo('.mt-title', { skewX: 0 }, { skewX: 10, duration: 0.04, yoyo: true, repeat: 5, ease: 'steps(1)' }, b(42));
+  punch(b(41.6), 1.05); punch(b(42), 1.04);
+  flash(b(43) - 0.04, 0.7);
+  sceneOff('math', b(43));
+
+  // ── RECAP (30.35 – 31.76) ───────────────────────────────────
+  sceneOn('recap', b(43));
+  show(b(43) + 0.05, '.rc-title', 0.35, { y: 20 }, { y: 0, ease: 'expo.out' });
+  tl.fromTo('.rc-tile', { autoAlpha: 0, rotationY: -95, z: -240 }, { autoAlpha: 1, rotationY: 0, z: 0, stagger: 0.045, duration: 0.42, ease: 'expo.out' }, b(43) + 0.04);
+  tl.fromTo('.rc-grid', { scale: 1.3, rotationX: 28, rotationZ: -6 }, { scale: 1, rotationX: 14, rotationZ: -2, duration: B * 1.6, ease: 'power2.out', immediateRender: true }, b(43));
+  punch(b(44), 1.04);
+  const mid = { x: vw / 2, y: vh / 2 };
+  qa('.rc-tile').forEach((el, i) => {
+    const c = center(el);
+    tl.fromTo(el, { x: 0, y: 0, scale: 1, autoAlpha: 1 }, { x: mid.x - c.x, y: mid.y - c.y, scale: 0.08, autoAlpha: 0, duration: 0.34, ease: 'power3.in' }, BREAKS[2] + i * 0.018);
+  });
+  hide(BREAKS[2], '.rc-title', 0.2, { y: -14 });
+  tl.fromTo('.rc-spark', { autoAlpha: 0, scale: 0, rotation: -90 }, { autoAlpha: 1, scale: 1, rotation: 0, duration: 0.3, ease: 'back.out(2.4)' }, BREAKS[2] + 0.3);
+  tl.fromTo('.rc-spark', { scale: 1 }, { scale: 0.7, duration: 0.2, yoyo: true, repeat: 1 }, BREAKS[2] + 0.42);
+  sceneOff('recap', b(45));
+
+  // ── OUTRO (31.76 – 34.64) ───────────────────────────────────
+  sceneOn('outro', b(45));
+  flash(b(45), 0.55);
+  tl.fromTo('.ou-spark', { autoAlpha: 0, scale: 2.4, rotation: -60, y: vh * 0.19 }, { autoAlpha: 1, scale: 1, rotation: 0, y: 0, duration: 0.6, ease: 'expo.out' }, b(45));
+  tl.fromTo('.ou-name .oc', { autoAlpha: 0, y: 30, filter: 'blur(10px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', stagger: 0.028, duration: 0.55, ease: 'expo.out' }, b(45) + 0.06);
+  show(b(45.7), '.ou-role', 0.45, { y: 14 }, { y: 0, ease: 'expo.out' });
+  show(b(46) + 0.06, '.ou-link', 0.4, { y: 12 }, { y: 0, ease: 'expo.out' });
+  punch(b(46), 1.03);
+  tl.fromTo('.ou-spark', { rotation: 0, scale: 1 }, { rotation: 90, scale: 1.25, duration: 0.5, ease: 'expo.out' }, b(47));
+  flash(b(47), 0.2);
+  tl.fromTo('.tv', { autoAlpha: 1 }, { autoAlpha: 0, duration: DURATION - 33.75, ease: 'power1.in' }, 33.75);
+
+  // ── Per-frame text: HUD, counters, waveform, typing, scramble ──
+  const hud = q('.hud'), tc = q('.hud-tc'), idx = q('.hud-idx'), repo = q('.hud-repo'), sc = q('.hud-sc'), bar = q('.hud-bar i');
+  const typed = qa('.op-typed .tc');
+  const waveBars = qa('.vo-wave i');
+  const voTime = q('.vo-time');
+  const cnN = q('.cn-n'), t4c1 = q('.t4-c1'), t4c2 = q('.t4-c2'), prAmt = q('.pr-amt'), mtA = q('.mt-a'), mtScore = q('.mt-score');
+  const scr = qa('.scr');
+  const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&@$';
+  const last = { scene: '', typed: -1, hud: '', light: null as boolean | null };
+  const vignette = q('.tv-vignette');
+  const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
   tl.eventCallback('onUpdate', () => {
     const t = tl.time();
     const s = Math.floor(t), f = Math.floor((t - s) * 24);
-    tc.textContent = `00:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+    tc.textContent = `00:00:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
+    bar.style.transform = `scaleX(${(t / DURATION).toFixed(4)})`;
+    const cur = scenes.find(x => t >= x.from && t < x.to) ?? scenes[scenes.length - 1];
+    const color = cur.id === 'open' && t < b(4) ? '#1b1f2e' : hudColor[cur.id];
+    if (color !== last.hud) { hud.style.setProperty('--hud', color); last.hud = color; }
+    const light = (cur.id === 'open' && t < b(4)) || cur.id === 'innerself' || cur.id === 'payroll';
+    if (light !== last.light) { vignette.style.opacity = light ? '0.2' : '1'; last.light = light; }
+    if (cur.id !== last.scene) {
+      last.scene = cur.id;
+      const p = projects.find(x => x.id === cur.id);
+      idx.textContent = p ? `${p.n} / 10` : cur.id === 'open' ? '00 / 10' : '10 / 10';
+      repo.textContent = p ? p.repo : 'github.com/Hwarinn66';
+      sc.textContent = cur.label.toUpperCase();
+    }
+    // Typing the prompt
+    const n = Math.floor(prog(t, b(10), B * 1.15) * typed.length);
+    if (n !== last.typed) { typed.forEach((el, i) => { el.style.opacity = i < n ? '1' : '0'; }); last.typed = n; }
+    // Counters
+    if (t > DROP && t < b(21)) cnN.textContent = String(Math.round(outCubic(prog(t, b(19), 0.62)) * 50));
+    if (t > b(26) && t < b(29)) { t4c1.textContent = t > b(27) + 0.15 ? '1' : '0'; t4c2.textContent = t > b(28) + 0.15 ? '1' : '0'; }
+    if (t > b(37) && t < b(39)) prAmt.textContent = rupiah(outCubic(prog(t, b(38) + 0.25, 0.6)) * 5487500);
+    if (t > b(41) && t < b(43)) {
+      mtA.textContent = t > b(41.6) ? '56' : '?';
+      const score = t < b(41.6) ? 0 : t < b(42) ? 10 : Math.round(10 + outCubic(prog(t, b(42), B)) * 120);
+      mtScore.textContent = String(score).padStart(4, '0');
+    }
+    // Voice: waveform + recorded time
+    if (t > b(24) - 0.05 && t < b(26) + 0.05) {
+      const env = outCubic(prog(t, b(24), 0.35));
+      const pump = Math.exp(-(t % B) * 5);
+      const N = waveBars.length;
+      waveBars.forEach((el, i) => {
+        const u = i / (N - 1);
+        const w = 0.5 + 0.5 * Math.cos((u - 0.5) * Math.PI);
+        const v = 0.32 * Math.abs(Math.sin(i * 0.45 + t * 7.3)) + 0.34 * Math.abs(Math.sin(i * 0.13 - t * 4.1 + Math.sin(t * 2 + i * 0.05))) + 0.34 * pump;
+        el.style.transform = `scaleY(${Math.max(0.015, env * w * v).toFixed(3)})`;
+      });
+      const rec = prog(t, b(24) + 0.2, B * 1.4) * (23 * 60 + 9);
+      voTime.textContent = `00:${String(Math.floor(rec / 60)).padStart(2, '0')}:${String(Math.floor(rec % 60)).padStart(2, '0')}`;
+    }
+    // Face title decodes like a scanner
+    if (t > b(29) - 0.05 && t < b(32)) {
+      scr.forEach((el, j) => {
+        const text = el.dataset.text || '';
+        const settled = Math.floor(prog(t, b(29) + 0.08 + j * 0.1, 0.5) * text.length);
+        const tick = Math.floor(t * 30);
+        el.textContent = Array.from(text).map((c, i) => (i < settled ? c : glyphs[Math.floor(hash(i * 7 + tick + j * 31) * glyphs.length)])).join('');
+      });
+    }
   });
   tl.set({}, {}, DURATION);
   return tl;
