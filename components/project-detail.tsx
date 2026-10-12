@@ -54,7 +54,10 @@ export default function ProjectDetail({ project, index, total, previous, next, o
 
       {project.note && <p className="detail-note"><Info size={17} /><span>{project.note}</span></p>}
 
-      <a className="btn btn-solid detail-repo" href={project.repository} target="_blank" rel="noopener noreferrer"><Github size={18} />Lihat source code<ArrowUpRight size={17} /></a>
+      <div className="detail-repos">
+        <a className="btn btn-solid" href={project.repository} target="_blank" rel="noopener noreferrer"><Github size={18} />{project.repositoryLabel ?? 'Lihat source code'}<ArrowUpRight size={17} /></a>
+        {project.repositoryAlt && <a className="btn btn-glass" href={project.repositoryAlt.url} target="_blank" rel="noopener noreferrer"><Github size={18} />{project.repositoryAlt.label}<ArrowUpRight size={17} /></a>}
+      </div>
 
       <nav className="detail-nav" aria-label="Proyek lain">
         <button onClick={() => onNavigate(-1)}><ArrowLeft size={18} /><span><small>Sebelumnya</small>{previous.name}</span></button>

@@ -1,6 +1,6 @@
 # Project content and provenance
 
-Content reviewed on 15 September 2026 against Efriza Taufiqurrohman's supplied CV and Portfolio PDF, and the public repositories of [Hwarinn66](https://github.com/Hwarinn66). Repository descriptions on this website are a curated snapshot, not an automatic live GitHub feed. The glassmorphism redesign (11 October 2026) kept this content; it only regrouped it into categories (`ml`, `cv`, `iot`, `web`) and per-project technology lists derived from the evidence below, used by the filters, the toolkit and the terminal.
+Content reviewed on 15 September 2026 (Dense Object Counter and Stock Recording added, replacing Hand Gesture Navigator and Math Game, on 12 October 2026) against Efriza Taufiqurrohman's supplied CV and Portfolio PDF, and the public repositories of [Hwarinn66](https://github.com/Hwarinn66). Repository descriptions on this website are a curated snapshot, not an automatic live GitHub feed. The glassmorphism redesign (11 October 2026) kept this content; it only regrouped it into categories (`ml`, `cv`, `iot`, `web`) and per-project technology lists derived from the evidence below, used by the filters, the toolkit and the terminal.
 
 | Project | Repository | Evidence reviewed | Scope represented on the website |
 | --- | --- | --- | --- |
@@ -9,8 +9,8 @@ Content reviewed on 15 September 2026 against Efriza Taufiqurrohman's supplied C
 | Face Recognition Attendance | [face-recognition](https://github.com/Hwarinn66/face-recognition) | README, PROJECT ABSEN/train_model.py, client and server source | Flask/Socket.IO, three clients, MediaPipe blink check, face enrollment, MobileNetV2, JSON/CSV attendance |
 | HR & Payroll System | [aplikasi](https://github.com/Hwarinn66/aplikasi) | composer.json, app/Config/Routes.php, app/Controllers/Payroll.php | CodeIgniter 4, employees, departments, positions, attendance, leave approval, payroll and payslips |
 | Laptop Recommendation | [laptop-recomendation-with-binary-tree](https://github.com/Hwarinn66/laptop-recomendation-with-binary-tree) | wqdw.py | Flask ProductBinaryTree and filtering by price and hardware specifications |
-| Hand Gesture Navigator | [gesture_hand](https://github.com/Hwarinn66/gesture_hand) | gggg.py | OpenCV and MediaPipe hand gestures mapped to opening websites |
-| Math Game | [math-game](https://github.com/Hwarinn66/math-game) | game/game.py | Flask, random questions, three difficulty levels, correct-answer and speed scoring |
+| Dense Object Counter | [Dense-Object-Counter](https://github.com/Hwarinn66/Dense-Object-Counter) | README, app.py, config.py, requirements.txt | FastAPI web app (the README still says Flask; `app.py` and the requirements use FastAPI), ROI, 1024 px tiles with 15% overlap, global NMS, YOLO (Ultralytics) or OpenCV detector, dataset/training/evaluation utilities; model weights and dataset not included |
+| Stock Recording | [Stock-Recording-Laravel](https://github.com/Hwarinn66/Stock-Recording-Laravel), [Stock-Recording-TypeScript](https://github.com/Hwarinn66/Stock-Recording-TypeScript) | both READMEs, package.json | QR scan → pending → quantity → approve/cancel, Room → Block → Rack → Position locations, QR UUID per item, IN/OUT, history, stock-opname adjustment, CSV; Laravel 12 + Blade, and Next.js + TypeScript with mysql2 (no ORM), Zod and SSE |
 
 The empty repositories were not featured. The payroll application's source is in `aplikasi`; the similarly named empty repository is not used as evidence. No private datasets, face enrollment images, credentials, or application user records were copied.
 

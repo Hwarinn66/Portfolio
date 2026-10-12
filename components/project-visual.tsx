@@ -118,42 +118,88 @@ function Laptop() {
   </>;
 }
 
-function Gesture() {
+const beads: [number, number][] = [[38, 99], [43, 45], [50, 79], [53, 157], [59, 123], [66, 64], [66, 108], [73, 154], [79, 130], [85, 143], [92, 156], [99, 72], [107, 54], [108, 110], [108, 142], [113, 89], [118, 44], [127, 98], [127, 118], [128, 71], [130, 140], [137, 45], [141, 106], [143, 88], [152, 77], [154, 52], [155, 94], [156, 147], [161, 130], [165, 70], [171, 101], [171, 156], [173, 140], [178, 63]];
+// The scan line crosses the ROI (x 30 → 192) between 0.48 s and 2.88 s of the 6 s loop; each box pops as it passes.
+const passAt = (x: number) => 0.48 + ((x - 30) / 162) * 2.4;
+
+function DenseCounter() {
   return <>
-    {[0, 1, 2, 3].map(i => <g key={i} className={i >= 2 ? 'pv-finger fold' : 'pv-finger'} style={v(i)}>
-      <rect x={52 + i * 14} y="50" width="11" height="48" rx="5.5" className="f-glass" />
-      <circle cx={57.5 + i * 14} cy="57" r="2.6" className="f-iris" />
+    <rect x="16" y="22" width="190" height="156" rx="12" className="f-glass" />
+    {[[22, 60], [23, 142], [199, 104]].map(([x, y]) => <ellipse key={`${x}${y}`} cx={x} cy={y} rx="4.4" ry="3.6" className="f-muted" />)}
+    <path d="M104 34 V166 M118 34 V166 M30 94 H192 M30 106 H192" className="s-tile" />
+    <rect x="104" y="34" width="14" height="132" className="f-overlap" />
+    <rect x="30" y="94" width="162" height="12" className="f-overlap" />
+    <rect x="30" y="34" width="162" height="132" rx="4" className="s-roi" />
+    {beads.map(([x, y]) => <ellipse key={`b${x}${y}`} cx={x} cy={y} rx="4.6" ry="3.8" className="f-bead" />)}
+    {beads.map(([x, y]) => <rect key={`x${x}${y}`} x={x - 6.5} y={y - 5.8} width="13" height="11.6" rx="2" className="pv-box" style={{ animationDelay: `${passAt(x).toFixed(2)}s` }} />)}
+    <rect x="29" y="34" width="2.4" height="132" rx="1.2" className="f-coral pv-sweep" />
+    <rect x="16" y="22" width="190" height="156" rx="12" className="pv-flash" />
+    <rect x="24" y="13" width="66" height="17" rx="8.5" className="f-ink" />
+    <circle cx="34" cy="21.5" r="3" className="f-coral pv-rec" />
+    <text x="41" y="25" className="t-inverse">snapshot</text>
+    <rect x="218" y="22" width="88" height="62" rx="12" className="f-glass" />
+    <text x="230" y="40" className="t-tiny">Objek terhitung</text>
+    <text x="229" y="70" className="t-count pv-count">{beads.length}</text>
+    <rect x="230" y="75" width="64" height="3" rx="1.5" className="f-muted" />
+    <rect x="230" y="75" width="64" height="3" rx="1.5" className="f-iris pv-progress" />
+    {['ROI', 'Tile 1024 · 15%', 'YOLO', 'NMS global'].map((label, i) => <g key={label} className="pv-step" style={{ animationDelay: `${[0.2, 0.45, 1.2, 2.9][i]}s` }}>
+      <rect x="218" y={94 + i * 22} width="88" height="18" rx="9" />
+      <text x="262" y={106 + i * 22} textAnchor="middle">{label}</text>
     </g>)}
-    <rect x="34" y="96" width="14" height="36" rx="7" transform="rotate(-28 41 114)" className="f-glass" />
-    <rect x="46" y="88" width="66" height="60" rx="22" className="f-glass" />
-    <text x="79" y="170" textAnchor="middle" className="t-label">Gestur</text>
-    <path d="M122 112 H168" className="s-flow" />
-    <rect x="176" y="44" width="128" height="104" rx="12" className="f-glass" />
-    <circle cx="188" cy="56" r="2.5" className="f-muted" /><circle cx="196" cy="56" r="2.5" className="f-muted" /><circle cx="204" cy="56" r="2.5" className="f-muted" />
-    <rect x="214" y="52" width="80" height="8" rx="4" className="f-muted" />
-    <g className="pv-page">
-      <rect x="188" y="72" width="64" height="10" rx="5" className="f-lilac" />
-      <rect x="188" y="90" width="104" height="6" rx="3" className="f-muted" />
-      <rect x="188" y="102" width="86" height="6" rx="3" className="f-muted" />
-      <rect x="188" y="118" width="48" height="18" rx="9" className="f-iris" />
-    </g>
-    <text x="240" y="170" textAnchor="middle" className="t-label">Buka situs</text>
   </>;
 }
 
-function MathGame() {
-  const questions = [['7 × 8', '56'], ['12 + 9', '21'], ['45 ÷ 5', '9']];
+const qr = [[1, 0, 1, 1, 1, 0, 1, 0, 1], [0, 1, 1, 0, 0, 1, 1, 1, 0], [1, 1, 0, 0, 1, 1, 0, 1, 1], [1, 0, 1, 1, 0, 0, 1, 0, 1], [0, 0, 0, 1, 1, 1, 1, 0, 0], [0, 1, 1, 0, 0, 1, 0, 1, 0], [1, 0, 1, 1, 1, 0, 1, 0, 0], [0, 1, 0, 0, 1, 1, 1, 1, 1], [1, 0, 0, 1, 0, 0, 1, 0, 1]];
+
+function StockRecording() {
+  const cell = 3.6, ox = 31.2, oy = 64;
+  const finder = (cx: number, cy: number) => <g key={`f${cx}${cy}`}>
+    <rect x={ox + cx * cell} y={oy + cy * cell} width={cell * 3} height={cell * 3} className="f-paper" />
+    <rect x={ox + cx * cell + 0.9} y={oy + cy * cell + 0.9} width={cell * 3 - 1.8} height={cell * 3 - 1.8} rx="1" className="s-finder" />
+    <rect x={ox + (cx + 1) * cell} y={oy + (cy + 1) * cell} width={cell} height={cell} className="f-ink" />
+  </g>;
   return <>
-    {questions.map(([q, a], i) => <g key={q} className="pv-q" style={v(i)}>
-      <text x="160" y="96" textAnchor="middle" className="t-equation">{q} = <tspan className="t-answer">{a}</tspan></text>
-    </g>)}
-    <text x="262" y="56" className="t-score pv-score">+10</text>
-    <rect x="60" y="116" width="200" height="8" rx="4" className="f-muted" />
-    <rect x="60" y="116" width="200" height="8" rx="4" className="f-iris pv-timer" />
-    {['Mudah', 'Sedang', 'Sulit'].map((label, i) => <g key={label} className="pv-level" style={v(i)}>
-      <rect x={70 + i * 62} y="144" width="56" height="22" rx="11" />
-      <text x={98 + i * 62} y="159" textAnchor="middle">{label}</text>
-    </g>)}
+    <rect x="20" y="26" width="62" height="138" rx="13" className="f-ink" />
+    <rect x="25" y="36" width="52" height="118" rx="7" className="f-paper" />
+    <rect x="31" y="43" width="40" height="13" rx="6.5" className="f-lagoon" />
+    <text x="51" y="52.5" textAnchor="middle" className="t-inverse">SCAN · IN</text>
+    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(r => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(c => {
+      if ((r < 3 && c < 3) || (r < 3 && c > 7) || (r > 7 && c < 3)) return null;
+      return qr[r % 9][(c * 2 + r) % 9] ? <rect key={`${r}-${c}`} x={ox + c * cell} y={oy + r * cell} width={cell} height={cell} className="f-ink" /> : null;
+    }))}
+    {finder(0, 0)}{finder(8, 0)}{finder(0, 8)}
+    <path d="M29 68 V61 H36 M66 61 H73 V68 M73 100 V107 H66 M36 107 H29 V100" className="s-scanframe pv-qr-hit" />
+    <rect x="29" y="62" width="44" height="2" rx="1" className="f-iris pv-qr-line" />
+    <text x="51" y="124" textAnchor="middle" className="t-strong">a0001</text>
+    <text x="51" y="137" textAnchor="middle" className="t-tiny">A.01.02</text>
+    <path d="M86 95 H104" className="s-flow" />
+    <g className="pv-tx">
+      <rect x="106" y="38" width="106" height="116" rx="12" className="f-paper" />
+      <text x="118" y="58" className="t-strong">a0001</text>
+      <text x="118" y="71" className="t-tiny">Ember 1 kg</text>
+      <rect x="118" y="78" width="54" height="15" rx="7.5" className="f-muted" />
+      <text x="145" y="88.6" textAnchor="middle" className="t-tiny">A.01.02</text>
+      <text x="118" y="111" className="t-tiny">Qty</text>
+      <g className="pv-qty"><rect x="140" y="103" width="60" height="11" rx="5.5" className="f-lilac" /><text x="170" y="111.4" textAnchor="middle" className="t-inverse">+12</text></g>
+      <g className="pv-pending"><rect x="118" y="124" width="82" height="19" rx="9.5" className="f-gold" /><text x="159" y="136.6" textAnchor="middle" className="t-inverse">PENDING</text></g>
+      <g className="pv-approved"><rect x="118" y="124" width="82" height="19" rx="9.5" className="f-lagoon" /><path d="M128 133.5 L131.5 137 L137.5 130" className="s-check" /><text x="166" y="136.6" textAnchor="middle" className="t-inverse">APPROVED</text></g>
+    </g>
+    <path d="M216 95 H232" className="s-flow" style={v(1)} />
+    <rect x="244" y="20" width="58" height="19" rx="9.5" className="f-glass" />
+    <text x="255" y="33" className="t-tiny">Stok</text>
+    <text x="294" y="33.5" textAnchor="end" className="t-strong pv-stock-old">48</text>
+    <text x="294" y="33.5" textAnchor="end" className="t-strong pv-stock-new">60</text>
+    <path d="M238 46 V164 M304 46 V164 M238 80 H304 M238 118 H304 M238 156 H304" className="s-rack" />
+    <rect x="243" y="64" width="16" height="14" rx="2" className="f-peach" />
+    <rect x="262" y="66" width="14" height="12" rx="2" className="f-mint" />
+    <rect x="281" y="62" width="17" height="16" rx="2" className="f-gold" />
+    <rect x="243" y="102" width="15" height="14" rx="2" className="f-mint" />
+    <rect x="261" y="99" width="20" height="17" rx="3" className="s-slot" />
+    <rect x="263" y="102" width="16" height="14" rx="2" className="f-lilac pv-shelf-box" />
+    <rect x="284" y="103" width="15" height="13" rx="2" className="f-peach" />
+    <rect x="243" y="140" width="17" height="14" rx="2" className="f-gold" />
+    <rect x="264" y="142" width="14" height="12" rx="2" className="f-peach" />
+    <text x="271" y="178" textAnchor="middle" className="t-tiny">Rak A.01</text>
   </>;
 }
 
@@ -163,8 +209,8 @@ const scenes: Record<string, { label: string; render: () => ReactNode }> = {
   'face-recognition': { label: 'Absensi wajah: pemindaian wajah, cek kedipan, lalu server mengirim data ke alat absensi, guru, dan siswa.', render: FaceRecognition },
   payroll: { label: 'Modul karyawan, absensi, cuti, dan payroll mengalir menjadi slip gaji.', render: Payroll },
   laptop: { label: 'Pencarian laptop menelusuri binary tree dari harga, prosesor, hingga RAM.', render: Laptop },
-  gesture: { label: 'Gestur tangan dikenali lalu membuka sebuah situs.', render: Gesture },
-  math: { label: 'Soal matematika acak dengan timer, skor, dan tiga level kesulitan.', render: MathGame },
+  'dense-counter': { label: 'Snapshot kamera dibatasi ROI, dipecah menjadi tile yang saling tumpang tindih, lalu setiap objek dikotakkan dan dihitung.', render: DenseCounter },
+  stock: { label: 'HP memindai QR barang, transaksi masuk sebagai pending, lalu setelah di-approve stok di rak bertambah.', render: StockRecording },
 };
 
 /** Animated diagram of a project's flow. Loops only while on screen. */

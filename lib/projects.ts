@@ -14,6 +14,10 @@ export type Project = {
   /** Additional technologies without a logo. */
   extras: string[];
   repository: string;
+  /** Button label for the repository when there are two versions. */
+  repositoryLabel?: string;
+  /** A second implementation of the same project, if there is one. */
+  repositoryAlt?: { label: string; url: string };
   featured: boolean;
   note?: string;
 };
@@ -36,7 +40,7 @@ export const projects: Project[] = [
     note: 'Prototipe berbasis data sintetis; bukan tes MBTI resmi atau diagnosis psikologis.',
   },
   {
-    id: 'smart-trash', name: 'Smart Trash', subtitle: 'Computer vision yang menggerakkan dunia fisik.', kind: 'Seminar dan lomba IoT', featured: true,
+    id: 'smart-trash', name: 'Smart Trash', subtitle: 'Computer vision yang menggerakkan dunia fisik.', kind: 'Proyek IoT', featured: true,
     description: 'Prototipe pemilah sampah organik dan nonorganik. Video kamera diproses dengan OpenCV dan MobileNetV2, lalu hasilnya dikirim melalui HTTP ke ESP32 untuk menggerakkan servo.',
     highlights: ['Transfer learning MobileNetV2 dengan augmentasi data, class weighting, dan fine-tuning.', 'Motion gate, smoothing lima frame, threshold confidence 70%, dan cooldown sebelum aktuasi berikutnya.', 'Blynk IoT untuk penghitung pemilahan dan pause/resume; stream kamera memiliki mekanisme reconnect.'],
     tags: ['ml', 'cv', 'iot'], stack: ['python', 'tensorflow', 'opencv', 'arduino'], extras: ['ESP32'],
@@ -65,16 +69,20 @@ export const projects: Project[] = [
     repository: 'https://github.com/Hwarinn66/laptop-recomendation-with-binary-tree',
   },
   {
-    id: 'gesture', name: 'Hand Gesture Navigator', subtitle: 'Gestur tangan sebagai pintasan.', kind: 'Computer vision', featured: false,
-    description: 'Webcam membaca gestur tangan melalui OpenCV dan MediaPipe, lalu memetakannya menjadi aksi untuk membuka website.',
-    highlights: [], tags: ['cv'], stack: ['python', 'opencv'], extras: ['MediaPipe'],
-    repository: 'https://github.com/Hwarinn66/gesture_hand',
+    id: 'dense-counter', name: 'Dense Object Counter', subtitle: 'Menghitung objek yang berdempetan.', kind: 'Computer vision', featured: false,
+    description: 'Aplikasi penghitung objek padat dari snapshot kamera atau gambar. Area dibatasi ROI, gambar besar dipecah menjadi tile, setiap tile dideteksi, lalu hasilnya digabungkan menjadi satu hitungan.',
+    highlights: ['Tiled inference 1024 px dengan overlap 15%, lalu NMS global agar objek di perbatasan tile tidak terhitung dua kali.', 'ROI membatasi area hitung dan dapat mengabaikan objek yang terpotong di tepi ROI.', 'Detector YOLO (Ultralytics) atau OpenCV, antarmuka web FastAPI, serta utilitas dataset, training, dan evaluasi hitungan.'],
+    tags: ['ml', 'cv'], stack: ['python', 'fastapi', 'opencv'], extras: ['YOLO', 'Tiled inference'],
+    repository: 'https://github.com/Hwarinn66/Dense-Object-Counter',
+    note: 'Bobot model terlatih dan dataset tidak disertakan di repositori; tidak ada klaim akurasi.',
   },
   {
-    id: 'math', name: 'Math Game', subtitle: 'Hitung cepat, skor naik.', kind: 'Web interaktif', featured: false,
-    description: 'Game matematika berbasis Flask dengan soal acak, tiga level kesulitan, serta skor yang memperhitungkan jawaban benar dan kecepatan.',
-    highlights: [], tags: ['web'], stack: ['python', 'flask', 'javascript'], extras: [],
-    repository: 'https://github.com/Hwarinn66/math-game',
+    id: 'stock', name: 'Stock Recording', subtitle: 'Scan QR, stok berubah setelah disetujui.', kind: 'Aplikasi web, Laravel dan Next.js', featured: false,
+    description: 'Sistem pencatatan stok gudang berbasis QR untuk komputer operator dan HP scanner. Scan hanya membuat transaksi pending; stok baru berubah setelah quantity diisi dan transaksi di-approve di komputer.',
+    highlights: ['Lokasi bertingkat Ruangan → Blok → Rak → Posisi, dengan satu posisi untuk satu barang aktif.', 'QR UUID per barang dan label cetak, scanner kamera HP dengan mode IN/OUT, histori, adjustment stock opname, serta ekspor CSV.', 'Dua versi: Laravel 12 dengan Blade, dan Next.js + TypeScript dengan mysql2 tanpa ORM, validasi Zod, dan pembaruan pending melalui SSE.'],
+    tags: ['web'], stack: ['php', 'javascript'], extras: ['Laravel 12', 'Next.js', 'TypeScript', 'MySQL'],
+    repository: 'https://github.com/Hwarinn66/Stock-Recording-Laravel', repositoryLabel: 'Versi Laravel',
+    repositoryAlt: { label: 'Versi Next.js', url: 'https://github.com/Hwarinn66/Stock-Recording-TypeScript' },
   },
 ];
 
