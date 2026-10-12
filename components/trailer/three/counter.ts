@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { b, objects, ROI, tiles } from '../trailer-data';
-import { canvasTexture, clamp01, fitFactor, inExpo, keys, outBack, outBounce, outExpo, prog, type Rig } from './util';
+import { canvasTexture, clamp01, fitFactor, hump, inExpo, keys, outBack, outBounce, outExpo, prog, type Rig } from './util';
 
 const S = 1 / 500;
 const X = (x: number) => (x - 500) * S;
@@ -119,6 +119,7 @@ export function makeCounterRig(opts: { mobile: boolean; heat: HTMLCanvasElement 
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), pos = new THREE.Vector3(), scl = new THREE.Vector3();
   const camPos = new THREE.Vector3(), look = new THREE.Vector3(), lensW = new THREE.Vector3();
   const dive = objects[order[3]];
+  const hopBeats = [b(18), b(19), b(20)];
   const diveTarget = new THREE.Vector3(), diveCam = new THREE.Vector3(), diveOffset = new THREE.Vector3(0.02, 0.12, 0.08);
 
   return {
@@ -129,7 +130,9 @@ export function makeCounterRig(opts: { mobile: boolean; heat: HTMLCanvasElement 
         const o = objects[i];
         const k = prog(t, T + rank[i] * 0.009, 0.62);
         const h = o.r * S * 0.55;
-        const y = h + (1 - outBounce(k)) * (1.7 + (i % 7) * 0.12);
+        // On every beat the objects hop in a ripple from the centre outward.
+        const hop = hump(t, hopBeats.map(at => at + (dist[i] / maxD) * 0.22), 0.3) * 0.1;
+        const y = h + (1 - outBounce(k)) * (1.7 + (i % 7) * 0.12) + hop;
         const s = k <= 0 ? 0 : 0.55 + 0.45 * outExpo(Math.min(1, k * 2));
         e.set(0, o.rot, 0.12 * Math.sin(i)); q.setFromEuler(e);
         scl.set(o.r * S * s, h * s, o.r * S * 0.74 * s);
@@ -138,7 +141,7 @@ export function makeCounterRig(opts: { mobile: boolean; heat: HTMLCanvasElement 
         // Boxes pop outward from the centre on b19, again lighter on b20.
         const bk = prog(t, b(19) + (dist[i] / maxD) * 0.42, 0.24);
         const bs = bk <= 0 ? 0 : outBack(bk, 2.4) * o.r * S * 2.5;
-        q.identity(); pos.set(X(o.x), h * 2 + 0.006, Z(o.y)); scl.set(bs, 1, bs);
+        q.identity(); pos.set(X(o.x), h * 2 + 0.006 + hop, Z(o.y)); scl.set(bs, 1, bs);
         boxes.setMatrixAt(i, m4.compose(pos, q, scl));
       }
       beads.instanceMatrix.needsUpdate = true;

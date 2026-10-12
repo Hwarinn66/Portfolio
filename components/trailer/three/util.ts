@@ -42,6 +42,10 @@ export function vkeys(t: number, frames: [number, [number, number, number]][], e
 }
 
 /** Cheap deterministic noise for idle motion. */
+/** 0 → 1 → 0 hump lasting `d` seconds after each beat time. */
+export const hump = (t: number, beats: number[], d = 0.3) => beats.reduce((acc, at) => { const x = (t - at) / d; return acc + (x > 0 && x < 1 ? Math.sin(Math.PI * x) : 0); }, 0);
+/** Spike that decays after each beat. */
+export const kickEnv = (t: number, beats: number[], rate = 7) => beats.reduce((acc, at) => acc + (t >= at ? Math.exp(-(t - at) * rate) : 0), 0);
 export const wobble = (t: number, seed: number) => Math.sin(t * 1.3 + seed) * 0.6 + Math.sin(t * 2.7 + seed * 1.7) * 0.4;
 
 export function canvasTexture(w: number, h: number, draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void) {

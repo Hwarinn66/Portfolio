@@ -319,6 +319,32 @@
 .ou-role em { color: #ffc49a; }
 .ou-link { left: 50%; top: calc(50% + min(11.5vw, 18vh)); translate: -50% 0; padding: 8px 16px; border: 1px solid rgb(255 255 255 / .2); border-radius: 99px; font: 500 clamp(.72rem, 1.1vw, .9rem) var(--mono); color: #dfe4ff; opacity: 0; }
 
+/* ── Beat layer: stickers, rings, pictures ─────────────── */
+.bts { position: absolute; inset: 0; pointer-events: none; }
+.bt { position: absolute; inset: 0; }
+.stk { position: absolute; left: var(--lx); top: var(--ly); width: min(10.5vmin, 104px); height: min(10.5vmin, 104px); margin: calc(min(10.5vmin, 104px) / -2) 0 0 calc(min(10.5vmin, 104px) / -2);
+  display: grid; place-items: center; padding: calc(min(10.5vmin, 104px) * .17); border-radius: 22%; background: #fff;
+  box-shadow: 0 14px 28px -10px rgb(0 0 0 / .55), inset 0 -3px 0 rgb(0 0 0 / .08); opacity: 0; visibility: hidden; }
+.stk img, .stk svg { width: 100%; height: 100%; display: block; }
+.bt-voice .stk { background: #fff4ee; }
+.bt-math .stk { border-radius: 0; box-shadow: 6px 6px 0 #ff2bd6; image-rendering: pixelated; }
+.bt-stock .stk { border-radius: 6px; box-shadow: 0 0 0 3px #ffd60a, 0 14px 28px -10px rgb(0 0 0 / .7); }
+.bt-payroll .stk { box-shadow: 0 10px 22px -12px rgb(29 42 34 / .6); border: 1px solid rgb(29 42 34 / .12); }
+.bt-laptop .stk { background: #e9f1ff; border-radius: 8px; box-shadow: 0 0 0 2px #dbe9ff, 0 14px 28px -12px rgb(0 0 0 / .6); }
+.ring { position: absolute; left: var(--lx); top: var(--ly); width: 34vmin; height: 34vmin; margin: -17vmin 0 0 -17vmin; border-radius: 50%; border: 3px solid var(--rc); box-shadow: 0 0 24px var(--rc), inset 0 0 24px var(--rc); opacity: 0; visibility: hidden; }
+.drop { position: absolute; width: min(9vmin, 90px); height: min(9vmin, 90px); margin: calc(min(9vmin, 90px) / -2) 0 0 calc(min(9vmin, 90px) / -2); opacity: 0; visibility: hidden; filter: drop-shadow(0 10px 14px rgb(0 0 0 / .45)); }
+.drop svg { width: 100%; height: 100%; }
+.drop-leaf, .drop-bottle { left: 80vw; top: 38vh; }
+.coins { position: absolute; left: 63vw; top: 86vh; width: min(8vmin, 80px); }
+.coin { position: absolute; left: 0; width: 100%; aspect-ratio: 64 / 40; opacity: 0; visibility: hidden; }
+.coin svg { width: 100%; height: 100%; display: block; }
+.lens { position: absolute; left: 0; top: 0; width: min(6vmin, 60px); height: min(6vmin, 60px); margin: calc(min(6vmin, 60px) / -2) 0 0 calc(min(6vmin, 60px) / -2); opacity: 0; visibility: hidden; filter: drop-shadow(0 0 10px rgb(255 214 10 / .6)); }
+.lens svg, .lap svg, .pcoin svg, .spk svg { width: 100%; height: 100%; display: block; }
+.lap { position: absolute; left: 0; top: 0; width: min(6.4vmin, 64px); aspect-ratio: 64 / 44; margin-left: calc(min(6.4vmin, 64px) / -2); opacity: 0; visibility: hidden; }
+.pcoin { position: absolute; left: 0; top: 0; width: min(5vmin, 48px); height: min(5vmin, 48px); margin: calc(min(5vmin, 48px) / -2) 0 0 calc(min(5vmin, 48px) / -2); opacity: 0; visibility: hidden; image-rendering: pixelated; }
+.spk { position: absolute; left: 50vw; top: 50vh; width: 4vmin; height: 4vmin; margin: -2vmin 0 0 -2vmin; fill: #c9b6ff; opacity: 0; visibility: hidden; filter: drop-shadow(0 0 8px rgb(167 123 255 / .8)); }
+.spk:nth-child(3n) { fill: #ffc49a; } .spk:nth-child(3n + 1) { fill: #8fb0ff; }
+
 /* ── Transitions ─────────────────────────────────────── */
 .xl { z-index: 3; pointer-events: none; }
 .x-iris { inset: 0; background: radial-gradient(circle at 50% 50%, #fff9f2 0%, #efe4ff 70%); clip-path: circle(0% at 50% 50%); visibility: hidden; }
@@ -434,6 +460,18 @@
   .ou-spark { top: 28%; }
 }
 
+@media (max-width: 720px), (orientation: portrait) {
+  .stk, .ring { left: var(--px); top: var(--py); }
+  .stk { width: 13vw; height: 13vw; margin: -6.5vw 0 0 -6.5vw; padding: 2.2vw; }
+  .ring { width: 60vw; height: 60vw; margin: -30vw 0 0 -30vw; }
+  .drop-leaf, .drop-bottle { left: 80vw; top: 56vh; }
+  .drop { width: 14vw; height: 14vw; margin: -7vw 0 0 -7vw; }
+  .coins { left: 74vw; top: 60vh; width: 14vw; }
+  .lens { width: 10vw; height: 10vw; margin: -5vw 0 0 -5vw; }
+  .lap { width: 9vw; margin-left: -4.5vw; }
+  .pcoin { width: 8vw; height: 8vw; margin: -4vw 0 0 -4vw; }
+  .spk { width: 7vw; height: 7vw; margin: -3.5vw 0 0 -3.5vw; }
+}
 @media (prefers-reduced-motion: reduce) { .tv-grain, .hud-rec, .in-blob, .hd-back p { animation: none !important; } }
 @media (pointer: coarse) { .tv-grain { display: none; } }
 

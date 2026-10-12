@@ -1,4 +1,5 @@
 import { bst, bstRange, projects, qrGrid, repoLangs, repoNames } from './trailer-data';
+import TrailerBeats from './trailer-beats';
 
 const letters = (text: string, cls = 'ch') => Array.from(text).map((c, i) => <span key={i} className={cls}>{c === ' ' ? ' ' : c}</span>);
 
@@ -231,6 +232,8 @@ export default function TrailerStage({ grain }: { grain: string }) {
           <p className="ou-link">github.com/Hwarinn66</p>
         </section>
       </div>
+
+      <TrailerBeats />
     </div>
 
     {/* ── Transitions ─────────────────────────────────── */}

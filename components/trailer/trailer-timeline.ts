@@ -1,5 +1,6 @@
 import { gsap } from 'gsap';
 import { B, b, BREAKS, DROP, DURATION, projects, scenes, shift3d, type SceneId } from './trailer-data';
+import { rings, stickers } from './trailer-beats';
 
 type Opts = { mobile: boolean; gentle: boolean };
 
@@ -32,7 +33,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   const hide = (t: number, target: gsap.TweenTarget, d = 0.22, to: gsap.TweenVars = {}, from: gsap.TweenVars = {}) =>
     tl.fromTo(target, { autoAlpha: 1, ...from }, { autoAlpha: 0, duration: d, ease: 'power2.in', ...to }, t);
   const screen = q('.tv-screen');
-  const punch = (t: number, s = 1.05) => tl.fromTo(screen, { scale: 1 + (s - 1) * k }, { scale: 1, duration: 0.38, ease: 'power3.out' }, t);
+  const punch = (t: number, s = 1.05) => tl.fromTo(screen, { scale: 1 + (s - 1) * k * 0.6 }, { scale: 1, duration: 0.38, ease: 'power3.out' }, t);
   const shake = (t: number, amp = 14) => tl.fromTo(screen, { x: amp * k, y: -amp * 0.6 * k, rotation: amp * 0.04 * k }, { x: 0, y: 0, rotation: 0, duration: 0.42, ease: 'elastic.out(1.1, 0.3)' }, t);
   const flash = (t: number, o = 0.5) => tl.fromTo('.x-flash', { opacity: o * (gentle ? 0.35 : 1) }, { opacity: 0, duration: 0.36, ease: 'power2.out' }, t);
   const sceneOn = (id: SceneId, t: number, d = 0.01) => tl.fromTo([`.bg-${id}`, `.fg-${id}`], { autoAlpha: 0 }, { autoAlpha: 1, duration: d, ease: 'none' }, t);
@@ -107,10 +108,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo(cnTitle, { autoAlpha: 0, yPercent: 70, scale: 1.45, fontVariationSettings: wdth(62) },
     { autoAlpha: 1, yPercent: 0, scale: 1, fontVariationSettings: wdth(125), duration: 0.62, stagger: 0.07, ease: 'expo.out', immediateRender: true }, DROP + 0.02);
   kick('counter', DROP + 0.2);
-  [b(18), b(19), b(20)].forEach(t => {
-    punch(t, 1.04);
-    tl.fromTo(cnTitle, { fontVariationSettings: wdth(95) }, { fontVariationSettings: wdth(125), duration: 0.35, stagger: 0.03, ease: 'expo.out' }, t);
-  });
+  [b(18), b(19), b(20)].forEach(t => punch(t, 1.03));
   qa('.cn-steps li').forEach((el, i) => show([b(17.6), b(18), b(19), b(19.5)][i], el, 0.32, { x: -24 }, { x: 0, ease: 'expo.out' }));
   show(b(19) - 0.04, '.cn-count', 0.35, { scale: 1.3, transformOrigin: '100% 0%' }, { scale: 1, ease: 'expo.out' });
   show(b(20) + 0.3, '.cn-cam', 0.3, { y: 10 }, { y: 0 });
@@ -153,7 +151,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo('.vo-specs span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.05, duration: 0.3 }, b(24.5));
   tl.fromTo('.vo-pipe li', { autoAlpha: 0, x: 18 }, { autoAlpha: 1, x: 0, stagger: 0.05, duration: 0.3 }, b(25) - 0.05);
   punch(b(25), 1.04);
-  tl.fromTo('.vo-t1', { scaleY: 1.18, transformOrigin: '0% 100%' }, { scaleY: 1, duration: 0.3 }, b(25));
   // Bars rise and become green stripes: wipe to Smart Trash.
   show(b(26) - 0.24, '.x-bars', 0.01);
   tl.fromTo('.x-bars i', { scaleY: 0, transformOrigin: '50% 100%' }, { scaleY: 1, transformOrigin: '50% 100%', duration: 0.22, ease: 'power3.in', stagger: { each: 0.01, from: 'center' } }, b(26) - 0.24);
@@ -207,9 +204,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   kick('hand', b(32) + 0.3);
   const gestures = [b(33), b(33.5), b(34), b(34.5)];
   const chips = qa('.hd-chip');
-  const titleSize = portrait ? vw * 0.134 : Math.min(vw * 0.078, vh * 0.13);
   gestures.forEach((t, i) => {
-    tl.fromTo('.hd-title .hc', { y: 0 }, { y: -0.12 * titleSize, duration: 0.11, yoyo: true, repeat: 1, stagger: 0.014, ease: 'power2.out' }, t);
     show(t, chips[i], 0.22, { scale: 0.55, rotation: -8 }, { scale: 1, rotation: 0, ease: 'back.out(2.6)' });
     if (i < 3) hide(gestures[i + 1] - 0.04, chips[i], 0.08, { scale: 0.8 });
     punch(t, i % 2 ? 1.03 : 1.045);
@@ -295,7 +290,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   const lvColors = ['#7dff6b', '#2bf6ff', '#ff2bd6'];
   qa('.mt-levels span').forEach((el, i) => tl.fromTo(el, { borderColor: '#3a3a46', color: '#6a6a7a' }, { borderColor: lvColors[i], color: lvColors[i], duration: 0.08 }, b(42) + i * B * 0.33));
   tl.fromTo('.mt-ops span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.06, duration: 0.12, ease: 'steps(2)', immediateRender: true }, b(42.2));
-  tl.fromTo('.mt-title', { skewX: 0 }, { skewX: 10, duration: 0.04, yoyo: true, repeat: 5, ease: 'steps(1)' }, b(42));
   punch(b(41.6), 1.05); punch(b(42), 1.04);
   flash(b(43) - 0.04, 0.7);
   sceneOff('math', b(43));
@@ -327,6 +321,80 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo('.ou-spark', { rotation: 0, scale: 1 }, { rotation: 90, scale: 1.25, duration: 0.5, ease: 'expo.out' }, b(47));
   flash(b(47), 0.2);
   tl.fromTo('.tv', { autoAlpha: 1 }, { autoAlpha: 0, duration: DURATION - 33.75, ease: 'power1.in' }, 33.75);
+
+  // ── Beat accents: logos, rings and pictures instead of bouncing type ──
+  const exitAt: Partial<Record<SceneId, [number, number]>> = {
+    counter: [b(20.6), 0.2], innerself: [b(24) - 0.3, 0.2], voice: [b(26) - 0.02, 0.01], trash: [BREAKS[0] + 0.27, 0.01], face: [b(32) - 0.05, 0.16],
+    hand: [b(35) - 0.2, 0.12], stock: [b(37) - 0.05, 0.01], payroll: [b(39), 0.01], laptop: [b(41), 0.01], math: [b(43) - 0.04, 0.01],
+  };
+  (Object.keys(stickers) as SceneId[]).forEach(id => {
+    const els = qa(`.bt-${id} .stk`);
+    const [out, d] = exitAt[id] ?? [scenes.find(x => x.id === id)!.to - 0.16, 0.14];
+    stickers[id]!.forEach((st, i) => {
+      const r = portrait ? st.p[2] : st.l[2];
+      const pixel = id === 'math';
+      tl.fromTo(els[i], { autoAlpha: 0, scale: 2.4, rotation: r - 28, y: -24 },
+        { autoAlpha: 1, scale: 1, rotation: r, y: 0, duration: pixel ? 0.2 : 0.34, ease: pixel ? 'steps(4)' : 'back.out(2.4)', immediateRender: true }, b(st.at) - 0.05);
+      tl.fromTo(els[i], { autoAlpha: 1, scale: 1 }, { autoAlpha: 0, scale: 0.3, duration: d, ease: 'power2.in' }, out + i * (d > 0.05 ? 0.02 : 0));
+    });
+  });
+  (Object.keys(rings) as SceneId[]).forEach(id => rings[id]!.beats.forEach(bt =>
+    tl.fromTo(`.ring-${id}`, { autoAlpha: 0.95, scale: 0.12 }, { autoAlpha: 0, scale: 1.75, duration: 0.62, ease: 'expo.out' }, b(bt))));
+
+  // Smart Trash: a leaf falls into the sorter on b27 and is flicked left; a bottle on b28, flicked right.
+  [['.drop-leaf', 27, -1], ['.drop-bottle', 28, 1]].forEach(([sel, beat, dir]) => {
+    const t = b(beat as number), dx = (dir as number) * (portrait ? vw * 0.62 : vw * 0.42);
+    tl.fromTo(sel as string, { autoAlpha: 1, x: 0, y: -vh * 0.55, rotation: -50 * (dir as number) }, { y: 0, rotation: 8 * (dir as number), duration: 0.32, ease: 'power2.in', immediateRender: false }, t - 0.32);
+    tl.fromTo(sel as string, { x: 0, y: 0, rotation: 8 * (dir as number), autoAlpha: 1 }, { x: dx, y: vh * 0.1, rotation: 260 * (dir as number), autoAlpha: 0, duration: 0.5, ease: 'power2.out' }, t);
+  });
+
+  // Payroll: coins land one by one and stack.
+  const coins = qa('.coin');
+  const coinH = coins[0]?.getBoundingClientRect().height || 40;
+  coins.forEach((el, i) => {
+    const t = b(37.5) + i * B * 0.25;
+    tl.fromTo(el, { autoAlpha: 1, y: -vh * 0.7, scaleY: 1 }, { y: -i * coinH * 0.34, duration: 0.24, ease: 'power3.in', immediateRender: false }, t - 0.24);
+    tl.fromTo(el, { scaleY: 0.7, transformOrigin: '50% 100%' }, { scaleY: 1, duration: 0.2, ease: 'back.out(3)' }, t);
+  });
+  hide(b(39) - 0.02, '.coin', 0.01);
+
+  // Laptop BST: a lens hops down the search path on quarter beats; laptops drop under the results.
+  const nodes = qa('.lp-node');
+  const nodeAt = (i: number) => { const r = nodes[i].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height }; };
+  const path = [0, 1, 4, 10, 5, 11];
+  const lens = q('.lens');
+  path.forEach((n, j) => {
+    const p = nodeAt(n), t = b(39.5) + j * B * 0.25;
+    if (j === 0) tl.fromTo(lens, { autoAlpha: 0, x: p.x, y: p.y - 60, scale: 0.4 }, { autoAlpha: 1, y: p.y, scale: 1, duration: 0.16, ease: 'back.out(2)', immediateRender: false }, t - 0.16);
+    else {
+      const prev = nodeAt(path[j - 1]);
+      tl.fromTo(lens, { x: prev.x, y: prev.y }, { x: p.x, duration: 0.15, ease: 'power2.inOut' }, t - 0.15);
+      tl.fromTo(lens, { y: prev.y }, { keyframes: [{ y: Math.min(prev.y, p.y) - p.h * 0.9, duration: 0.075, ease: 'power2.out' }, { y: p.y, duration: 0.075, ease: 'power2.in' }] }, t - 0.15);
+    }
+  });
+  hide(b(41) - 0.02, lens, 0.01);
+  qa('.lap').forEach((el, i) => {
+    const p = nodeAt([9, 10, 11][i]);
+    tl.fromTo(el, { autoAlpha: 0, x: p.x, y: p.y + p.h * 0.55 - 40, scale: 0.3 }, { autoAlpha: 1, y: p.y + p.h * 0.62, scale: 1, duration: 0.3, ease: 'back.out(3)', immediateRender: false }, b(40.75) + i * 0.06);
+  });
+  hide(b(41) - 0.02, '.lap', 0.01);
+
+  // Math Game: pixel coins burst from the answer on b41.6 and again on b42.5.
+  const ans = center(q('.mt-a'));
+  const pcoins = qa('.pcoin');
+  [b(41.6), b(42.5)].forEach((t, burst) => pcoins.forEach((el, i) => {
+    const a = (i / pcoins.length) * Math.PI * 2 + burst * 0.4, r = (portrait ? vw * 0.36 : vh * 0.3) * (burst ? 1.25 : 1);
+    tl.fromTo(el, { autoAlpha: 1, x: ans.x, y: ans.y, scale: 0.5 }, { x: ans.x + Math.cos(a) * r, y: ans.y + Math.sin(a) * r, scale: 1.2, duration: 0.42, ease: 'steps(6)' }, t);
+    tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.12, ease: 'steps(2)' }, t + 0.42);
+  }));
+
+  // Outro: sparkles scatter from the name on the closing hits.
+  const sparks = qa('.spk');
+  [b(46), b(47)].forEach((t, burst) => sparks.forEach((el, i) => {
+    const a = (i / sparks.length) * Math.PI * 2 + burst * 0.3, r = (portrait ? vw * 0.42 : vh * 0.42) * (0.7 + (i % 3) * 0.2);
+    tl.fromTo(el, { autoAlpha: 1, x: 0, y: 0, scale: 0.2, rotation: 0 }, { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.8, scale: 1, rotation: 120, duration: 0.6, ease: 'expo.out' }, t);
+    tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.3 }, t + 0.35);
+  }));
 
   // ── Per-frame text: HUD, counters, waveform, typing, scramble ──
   const hud = q('.hud'), tc = q('.hud-tc'), idx = q('.hud-idx'), repo = q('.hud-repo'), sc = q('.hud-sc'), bar = q('.hud-bar i');

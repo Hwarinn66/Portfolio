@@ -24,7 +24,7 @@ Education, work history, certificate status, portrait, contact links and PDFs co
 
 - Portrait and two certificate thumbnails: extracted from the supplied documents and preserved from the original website. No generative edits.
 - CV and Portfolio PDFs: original user-supplied content, published under descriptive download filenames.
-- Technology logos: [Devicon](https://github.com/devicons/devicon), pinned revision `7330accdbc47e2dc0c19789a48533c4a3c50fe58`. Original SVG colors retained. Exact source URLs and SHA-256 checksums are in `public/assets/logos/sources.json`; the upstream MIT license is in the same directory.
+- Technology logos: [Devicon](https://github.com/devicons/devicon), pinned revision `7330accdbc47e2dc0c19789a48533c4a3c50fe58`. Laravel, TypeScript, MySQL, CodeIgniter, Socket.IO, HTML5, NumPy and Bootstrap were added from the same revision for the trailer's stickers; each sticker only names a technology the project's repository uses. Original SVG colors retained. Exact source URLs and SHA-256 checksums are in `public/assets/logos/sources.json`; the upstream MIT license is in the same directory.
 - The Arduino logo describes the Arduino IDE ecosystem, not an official ESP32 logo. Logos identify technologies, not endorsements.
 - Interface icons: [Lucide](https://lucide.dev/), ISC license, installed through `lucide-react`.
 - Local fonts: Bricolage Grotesque, Instrument Sans and JetBrains Mono via Fontsource, SIL Open Font License, included with their installed packages. Fonts are served with the website and do not require a Google Fonts request.

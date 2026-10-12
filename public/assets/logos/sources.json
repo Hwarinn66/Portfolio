@@ -79,6 +79,54 @@
       "filename": "arduino.svg",
       "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/arduino/arduino-original.svg",
       "sha256": "e1748d89b57310e6272df4de73a49c71b597126a5104c1e22cf5231c90507e94"
+    },
+    {
+      "name": "laravel",
+      "filename": "laravel.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/laravel/laravel-original.svg",
+      "sha256": "b293960cd642537d2b19a1442168a396f25bdd31eb10f4f92447623cfc5730df"
+    },
+    {
+      "name": "typescript",
+      "filename": "typescript.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/typescript/typescript-original.svg",
+      "sha256": "c9191199f4049920c2fc19035b8a6664f37f4689fcd9e8434e786097e78863f0"
+    },
+    {
+      "name": "mysql",
+      "filename": "mysql.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/mysql/mysql-original.svg",
+      "sha256": "f73fa5d6b9da33fbf540ff96f5360c24b6d29d883ecfe6fcaecf89a8d3456067"
+    },
+    {
+      "name": "codeigniter",
+      "filename": "codeigniter.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/codeigniter/codeigniter-plain.svg",
+      "sha256": "e891784062c784af395da5d9695b071fefbe829cf41ede7f86fa83e8c4cdadb5"
+    },
+    {
+      "name": "socketio",
+      "filename": "socketio.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/socketio/socketio-original.svg",
+      "sha256": "8eb3ff7176fc26c34c8e3c6887d71717193ff0ae4529de9419ce628413bfb6fb"
+    },
+    {
+      "name": "html5",
+      "filename": "html5.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/html5/html5-original.svg",
+      "sha256": "34826e5b3315daadf4fa15f723a3c1d5ba4a89277bfd94e22ac4d7d3d54338c5"
+    },
+    {
+      "name": "numpy",
+      "filename": "numpy.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/numpy/numpy-original.svg",
+      "sha256": "efd53b9bf8637500d43ece39fe7ac43c972066f7166e408c5fd13e7cb73d7a05"
+    },
+    {
+      "name": "bootstrap",
+      "filename": "bootstrap.svg",
+      "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/bootstrap/bootstrap-original.svg",
+      "sha256": "016c324b3743e9be8dc2ca3a89bb5bd169d417f4f29fe5e731b16644abeb12cf"
     }
   ]
 }

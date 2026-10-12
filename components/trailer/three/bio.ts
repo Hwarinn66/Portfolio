@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { b } from '../trailer-data';
-import { dotTexture, fitFactor, inExpo, inOutCubic, keys, outBack, outExpo, prog, type Rig, type View } from './util';
+import { dotTexture, fitFactor, hump, inExpo, inOutCubic, keys, kickEnv, outBack, outExpo, prog, type Rig, type View } from './util';
 import { blendCurl, GESTURES, HAND_CONNECTIONS, handPose, TIPS, type Curl } from './hand-pose';
 
 /** Head-shaped surface: z offset of the face features at (x, y) on the front. */
@@ -80,18 +80,20 @@ export function makeBioRig(opts: { mobile: boolean }, view: View): Rig {
   const uniforms = {
     uForm: { value: 0 }, uMorph: { value: 0 }, uScan: { value: 2 }, uBlink: { value: 0 }, uAlpha: { value: 1 },
     uSize: { value: 0.022 }, uScale: { value: 1000 }, uMap: { value: dotTexture() }, uTime: { value: 0 },
-    uColA: { value: new THREE.Color('#5ff3ff') }, uColB: { value: new THREE.Color('#fff4e8') }, uOk: { value: 0 },
+    uColA: { value: new THREE.Color('#5ff3ff') }, uColB: { value: new THREE.Color('#fff4e8') }, uOk: { value: 0 }, uPulse: { value: 0 },
   };
   const mat = new THREE.ShaderMaterial({
     uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
       attribute vec3 aB; attribute float aRand; attribute float aEye; attribute float aFeat;
-      uniform float uForm, uMorph, uScan, uBlink, uSize, uScale, uTime;
+      uniform float uForm, uMorph, uScan, uBlink, uSize, uScale, uTime, uPulse;
       varying float vGlow; varying float vRand; varying float vM;
       void main() {
         vec3 a = position;
         // blink: eye points collapse vertically toward the eye line
         a.y = mix(a.y, 0.15, uBlink * aEye * 0.85);
+        // beat pulse: the cloud breathes outward
+        a += normalize(a + vec3(0.0001)) * uPulse * (0.04 + aRand * 0.12);
         vec3 scatter = a * (2.2 + aRand * 2.0) + vec3(sin(aRand * 50.0), cos(aRand * 70.0), sin(aRand * 90.0)) * 1.5;
         float f = clamp(uForm * 1.5 - aRand * 0.5, 0.0, 1.0);
         a = mix(scatter, a, 1.0 - pow(1.0 - f, 3.0));
@@ -169,6 +171,7 @@ export function makeBioRig(opts: { mobile: boolean }, view: View): Rig {
   const gestureKeys: [number, Curl][] = [
     [MORPH, GESTURES.open], [b(33), GESTURES.peace], [b(33.5), GESTURES.rock], [b(34), GESTURES.thumbs], [b(34.5), GESTURES.open],
   ];
+  const gestureBeats = [b(33), b(33.5), b(34), b(34.5)];
   const curlAt = (t: number): Curl => {
     let cur = gestureKeys[0][1];
     for (let i = 1; i < gestureKeys.length; i++) {
@@ -194,6 +197,7 @@ export function makeBioRig(opts: { mobile: boolean }, view: View): Rig {
       ring.scale.set(rad * 0.85, rad, 1);
       uniforms.uBlink.value = [b(30.5), b(30.85)].reduce((acc, at) => Math.max(acc, t > at && t < at + 0.18 ? Math.sin(((t - at) / 0.18) * Math.PI) : 0), 0);
       uniforms.uOk.value = prog(t, b(31), 0.2);
+      uniforms.uPulse.value = kickEnv(t, [b(30), b(31)], 6) + kickEnv(t, [b(29.5), b(30.5), b(31.5)], 8) * 0.5;
       meshGeo.setDrawRange(0, Math.floor(prog(t, b(30), 0.45) * segCount / 2) * 2);
       (meshLines.material as THREE.LineBasicMaterial).opacity = keys(t, [[b(30), 0], [b(30) + 0.1, 0.55], [MORPH, 0.45], [MORPH + 0.1, 0]]);
       head.rotation.y = keys(t, [[T, -0.85], [b(31), -0.38], [MORPH, -0.2]], inOutCubic) * (1 - prog(t, MORPH, 0.3));
@@ -214,7 +218,7 @@ export function makeBioRig(opts: { mobile: boolean }, view: View): Rig {
         hand.rotation.set(-0.08 + Math.sin(t * 1.4) * 0.05, Math.sin(t * 0.9) * 0.22 - thumbsK * 0.55, thumbsK * 0.86 - swipe * 0.6);
         hand.position.set(swipe * 7, HAND_Y + Math.sin(t * 2.1) * 0.04, 0);
         for (let i = 0; i < 21; i++) {
-          const rr = (i === 0 ? 0.11 : TIPS.includes(i) ? 0.085 : 0.075) * solid;
+          const rr = (i === 0 ? 0.11 : TIPS.includes(i) ? 0.085 : 0.075) * solid * (1 + hump(t, gestureBeats, 0.22) * (TIPS.includes(i) ? 0.6 : 0.25));
           jointMesh.setMatrixAt(i, m4.compose(pose[i], q.identity(), sc.setScalar(Math.max(0.0001, rr))));
         }
         HAND_CONNECTIONS.forEach(([a, c], i) => {
