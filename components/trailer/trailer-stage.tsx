@@ -1,5 +1,5 @@
 import { bst, bstRange, projects, qrGrid, repoLangs, repoNames } from './trailer-data';
-import TrailerBeats from './trailer-beats';
+import TrailerMoments from './trailer-moments';
 
 const letters = (text: string, cls = 'ch') => Array.from(text).map((c, i) => <span key={i} className={cls}>{c === ' ' ? ' ' : c}</span>);
 
@@ -55,7 +55,7 @@ export default function TrailerStage({ grain }: { grain: string }) {
           <i className="op-streak" />
           <div className="op-mark"><Sparkle className="op-spark" id="sp-a" /><p className="op-word">{letters('Efriza')}</p></div>
           <p className="op-sub">machine learning · computer vision · web</p>
-          <div className="op-numlabel"><b>proyek</b><span>11 repositori · github.com/Hwarinn66</span></div>
+          <div className="op-numlabel"><b>Lihat lebih dalam.</b><span>computer vision · machine learning · web</span></div>
           <div className="op-ui">
             <p className="op-hi"><Sparkle className="op-hi-spark" id="sp-b" /><span>Hai, aku Efriza</span></p>
             <h2 className="op-q">{['Mau', 'lihat', 'apa', 'dulu?'].map(w => <span key={w} className="w"><span>{w}</span></span>)}</h2>
@@ -70,7 +70,7 @@ export default function TrailerStage({ grain }: { grain: string }) {
           <div className="op-repos">{repoNames.map((r, i) => <span key={r} className="op-repo" style={{ '--i': i } as React.CSSProperties}><i className={`lang lang-${repoLangs[i].toLowerCase()}`} />{r}</span>)}</div>
           <div className="op-doc">
             <div className="op-doc-in">
-              <p className="op-doc-h"><Sparkle className="op-doc-spark" id="sp-c" />10 proyek ditemukan</p>
+              <p className="op-doc-h"><Sparkle className="op-doc-spark" id="sp-c" />Proyek ditemukan</p>
               <ol>{projects.map(p => <li key={p.id}><b>{p.n}</b><span>{p.name}</span><em>{p.kind}</em></li>)}</ol>
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function TrailerStage({ grain }: { grain: string }) {
             <li>ROI</li><li>Tile 1024 px · overlap 15%</li><li>YOLO · 1 kelas</li><li>NMS global + cek seam</li>
           </ul>
           <div className="cn-count"><b className="cn-n">0</b><span>objek terhitung</span></div>
-          <p className="cn-cam">snapshot dari kamera HP · IP Webcam</p>
+          <p className="cn-cam">webcam · snapshot · scan</p>
           <pre className="cn-json">{'{ "count": 50,\n  "roi": [100, 100, 900, 900],\n  "boxes": [ … ] }'}</pre>
         </section>
 
@@ -219,7 +219,7 @@ export default function TrailerStage({ grain }: { grain: string }) {
 
         {/* Recap */}
         <section className="fg fg-recap">
-          <h2 className="rc-title">10 proyek. <em>Satu GitHub.</em></h2>
+          <h2 className="rc-title">Dari kamera <em>sampai kode.</em></h2>
           <div className="rc-grid">{projects.map(p => <div key={p.id} className={`rc-tile rc-${p.id}`}><b>{p.n}</b><span>{p.name}</span></div>)}</div>
           <Sparkle className="rc-spark" id="sp-d" />
         </section>
@@ -227,13 +227,13 @@ export default function TrailerStage({ grain }: { grain: string }) {
         {/* Outro */}
         <section className="fg fg-outro">
           <Sparkle className="ou-spark" id="sp-e" />
-          <h2 className="ou-name"><span className="ou-1">{letters('Efriza', 'oc')}</span> <span className="ou-2">{letters('Taufiqurrohman', 'oc')}</span></h2>
+          <h2 className="ou-name"><span className="ou-1">{letters('Efriza', 'oc')}</span><span className="ou-2"><i className="ou-rule" />{letters('TAUFIQURROHMAN', 'oc')}<i className="ou-rule" /></span></h2>
           <p className="ou-role"><em>machine learning</em> &amp; <em>computer vision</em></p>
           <p className="ou-link">github.com/Hwarinn66</p>
         </section>
       </div>
 
-      <TrailerBeats />
+      <TrailerMoments />
     </div>
 
     {/* ── Transitions ─────────────────────────────────── */}
@@ -252,11 +252,15 @@ export default function TrailerStage({ grain }: { grain: string }) {
       <i className="hcr hcr1" /><i className="hcr hcr2" /><i className="hcr hcr3" /><i className="hcr hcr4" />
       <p className="hud-tl"><b>EFRIZA TAUFIQURROHMAN</b><span>PROJECT REEL · 2026</span></p>
       <p className="hud-tr"><span><i className="hud-rec" />TC <b className="hud-tc">00:00:00:00</b></span><span className="hud-sc">PEMBUKA</span></p>
-      <p className="hud-bl"><b className="hud-idx">00 / 10</b><span className="hud-repo">github.com/Hwarinn66</span></p>
-      <p className="hud-br">85 BPM · 34 DETIK</p>
+      <p className="hud-bl"><b className="hud-idx">PEMBUKA</b><span className="hud-repo">github.com/Hwarinn66</span></p>
+      <p className="hud-br">REEL 2026 · 40 DETIK</p>
       <i className="hud-bar"><i /></i>
     </div>
+    <div className="cine"><i /><i /></div>
+    <i className="leak leak-a" /><i className="leak leak-b" />
+    <i className="flare" />
     <i className="x-flash" />
+    <i className="x-black" />
     <i className="tv-grain" style={grain ? { backgroundImage: `url(${grain})` } : undefined} />
     <i className="tv-vignette" />
   </div>;

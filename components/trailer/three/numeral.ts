@@ -3,22 +3,32 @@ import { b } from '../trailer-data';
 import { dotTexture, fitFactor, keys, outExpo, inOutSine, prog, type Rig, type View } from './util';
 
 /**
- * Opening: a glowing particle numeral ("10" projects) that assembles out of a
- * scattered field, breathes on the melody, then blows out toward the camera.
+ * Opening: a glowing particle camera aperture (six iris blades) that assembles
+ * out of a scattered field, turns slowly, then blows out toward the camera.
  */
-export function makeNumeralRig(opts: { mobile: boolean; text: string }, view: View): Rig {
+export function makeNumeralRig(opts: { mobile: boolean }, view: View): Rig {
   const group = new THREE.Group();
   const N = opts.mobile ? 2200 : 3600;
 
-  // Sample the glyphs from a canvas.
+  // Draw the aperture on a canvas, then sample its pixels.
   const cw = 640, ch = 400;
   const c = document.createElement('canvas');
   c.width = cw; c.height = ch;
   const ctx = c.getContext('2d')!;
-  ctx.fillStyle = '#fff';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `900 360px "Archivo Variable", "Instrument Sans Variable", sans-serif`;
-  ctx.fillText(opts.text, cw / 2, ch / 2 + 14);
+  const cx = cw / 2, cy = ch / 2, R = 186;
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, R - 26, 0, Math.PI * 2); ctx.fill();
+  ctx.globalCompositeOperation = 'destination-out';
+  const hex = (k: number) => { const a = (k / 6) * Math.PI * 2 + 0.3; return [cx + Math.cos(a) * 64, cy + Math.sin(a) * 64]; };
+  ctx.beginPath(); for (let k = 0; k < 6; k++) { const [x, y] = hex(k); if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); } ctx.closePath(); ctx.fill();
+  ctx.lineWidth = 7;
+  for (let k = 0; k < 6; k++) {
+    const [x0, y0] = hex(k), [x1, y1] = hex(k + 1);
+    const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + (dx / len) * 260, y0 + (dy / len) * 260); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
   const data = ctx.getImageData(0, 0, cw, ch).data;
   const filled: number[] = [];
   for (let y = 0; y < ch; y += 2) for (let x = 0; x < cw; x += 2) if (data[(y * cw + x) * 4 + 3] > 140) filled.push(x, y);
@@ -66,7 +76,7 @@ export function makeNumeralRig(opts: { mobile: boolean; text: string }, view: Vi
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
         gl_PointSize = uSize * uScale * (0.55 + aRand * 0.9) * (1.0 + uPulse * 0.4) / -mv.z;
-        vColor = aColor * (0.8 + uPulse * 0.6); vFade = 1.0 - uBlow * (0.4 + aRand * 0.6);
+        vColor = aColor * (0.95 + uPulse * 0.6); vFade = 1.0 - uBlow * (0.4 + aRand * 0.6);
       }`,
     fragmentShader: /* glsl */`
       uniform sampler2D uMap; uniform float uAlpha;
@@ -89,9 +99,9 @@ export function makeNumeralRig(opts: { mobile: boolean; text: string }, view: Vi
       uniforms.uAlpha.value = keys(t, [[from, 0], [from + 0.35, 1], [b(7.6), 1], [to, 0]]);
       uniforms.uForm.value = outExpo(prog(t, b(4) - 0.1, 1.5)) * 0.999 + 0.001;
       uniforms.uBlow.value = Math.pow(prog(t, b(7.55), 0.6), 1.6);
-      // Melody hits: breathe on b5, b6 (strong), b7.
-      uniforms.uPulse.value = [b(5), b(6), b(7)].reduce((acc, at, i) => acc + (t >= at ? Math.exp(-(t - at) * 6) * (i === 1 ? 1 : 0.6) : 0), 0);
+      uniforms.uPulse.value = 0;
       group.rotation.y = Math.sin(t * 0.6) * 0.22 + keys(t, [[b(4), -0.5], [b(5.5), 0]], outExpo);
+      group.rotation.z = -t * 0.22;
       group.rotation.x = Math.sin(t * 0.45) * 0.06;
       const f = fitFactor(aspect, 1.3);
       cam.fov = 38; cam.position.set(0, 0.05, keys(t, [[from, 7.6], [b(6), 6.1], [b(8), 4.6]], inOutSine) * f);

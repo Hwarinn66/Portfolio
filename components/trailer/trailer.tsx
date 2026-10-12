@@ -12,6 +12,7 @@ import '@fontsource/chakra-petch/700.css';
 import '@fontsource-variable/unbounded';
 import '@fontsource/press-start-2p/400.css';
 import '@fontsource/barlow-condensed/800.css';
+import '@fontsource-variable/bodoni-moda/standard-italic';
 import './trailer.css';
 import { getTrailerAudio } from '@/lib/trailer-audio';
 import TrailerStage from './trailer-stage';
@@ -26,7 +27,7 @@ const FONTS = [
   '900 40px "Archivo Variable"', 'italic 400 40px "Fraunces Variable"', '400 40px "Instrument Serif"', 'italic 400 40px "Instrument Serif"',
   '900 40px "Big Shoulders Display Variable"', '400 40px "Saira Stencil One"', '700 40px "Chakra Petch"', '600 40px "Chakra Petch"',
   '900 40px "Unbounded Variable"', '400 40px "Press Start 2P"', '800 40px "Barlow Condensed"', '500 40px "Instrument Sans Variable"',
-  '600 40px "JetBrains Mono Variable"',
+  '600 40px "JetBrains Mono Variable"', 'italic 600 40px "Bodoni Moda Variable"',
 ];
 
 function makeGrain(size = 160) {
@@ -88,7 +89,7 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     setSilent(true); setPlaying(true); setStarted(true);
   }, []);
 
-  // Page behind is made inert and stops animating; fonts load; then the music starts.
+  // Page behind is made inert and stops animating; fonts load; then the sound starts.
   useEffect(() => {
     setGrain(makeGrain());
     const html = document.documentElement;
@@ -103,7 +104,7 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     let world: World | null = null;
     const fonts = Promise.all(FONTS.map(f => document.fonts.load(f).catch(() => null)));
     const timeout = new Promise(resolve => window.setTimeout(resolve, 4000));
-    // 3D world after the fonts (its labels are drawn with them); shaders compile here, before the music starts.
+    // 3D world after the fonts (its labels are drawn with them); shaders compile here, before the sound starts.
     Promise.race([fonts, timeout]).then(() => {
       if (cancelled) return;
       const canvas = root.current?.querySelector<HTMLCanvasElement>('.tv-3d');
@@ -141,7 +142,7 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
     setEnded(true); setPlaying(false); setUi(true);
   }, []);
 
-  // Start the music when ready; master loop + audio events.
+  // Start the sound when ready; master loop + audio events.
   useEffect(() => {
     if (!ready) return;
     const audio = getTrailerAudio();
@@ -255,7 +256,7 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
   };
 
   return <div ref={root} className="trailer" role="dialog" aria-modal="true" aria-label="Trailer proyek Efriza" onMouseMove={poke}>
-    <p className="sr-only">Trailer 35 detik bermusik berisi sepuluh proyek di GitHub Efriza: Dense Object Counter, InnerSelf Cognitive, Voice Dataset, Smart Trash, Face Recognition, Hand Gesture, Stock Recording, Payroll System, Laptop Recommendation, dan Math Game.</p>
+    <p className="sr-only">Trailer 40 detik dengan efek suara, berisi proyek-proyek di GitHub Efriza: Dense Object Counter, InnerSelf Cognitive, Voice Dataset, Smart Trash, Face Recognition, Hand Gesture, Stock Recording, Payroll System, Laptop Recommendation, dan Math Game.</p>
     <TrailerStage grain={grain} />
 
     <div className="tr-hit" onPointerDown={e => { swipe.current = { x: e.clientX, y: e.clientY, t: performance.now() }; }}
@@ -269,8 +270,8 @@ export default function Trailer({ onClose, onSeeProjects }: Props) {
 
     <div className={`tr-ui ${ui || !playing ? '' : 'is-hidden'}`}>
       <button className="tr-close" onClick={close} aria-label="Tutup trailer"><X size={20} /></button>
-      {silent && <button className="tr-silent" onClick={enableSound}><VolumeX size={15} />Tanpa suara. Ketuk untuk menyalakan musik</button>}
-      {(!ready || !started) && !silent && <p className="tr-status"><span className="tr-spin" />{ready ? 'Memuat musik…' : 'Menyiapkan trailer…'}</p>}
+      {silent && <button className="tr-silent" onClick={enableSound}><VolumeX size={15} />Tanpa suara. Ketuk untuk menyalakan suara</button>}
+      {(!ready || !started) && !silent && <p className="tr-status"><span className="tr-spin" />{ready ? 'Memuat suara…' : 'Menyiapkan trailer…'}</p>}
       <div className="tr-controls">
         <button className="tr-btn" onClick={() => jumpChapter(-1)} aria-label="Bagian sebelumnya"><ChevronLeft size={18} /></button>
         <button className="tr-btn is-primary" onClick={togglePlay} aria-label={playing ? 'Jeda' : 'Putar'}>{playing ? <Pause size={18} /> : <Play size={18} />}</button>

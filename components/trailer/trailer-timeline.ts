@@ -1,6 +1,5 @@
 import { gsap } from 'gsap';
-import { B, b, BREAKS, DROP, DURATION, projects, scenes, shift3d, type SceneId } from './trailer-data';
-import { rings, stickers } from './trailer-beats';
+import { B, b, BREAKS, DROP, DURATION, projects, SCAN, scannedCount, scenes, shift3d, SHUTTER, type SceneId } from './trailer-data';
 
 type Opts = { mobile: boolean; gentle: boolean };
 
@@ -17,8 +16,8 @@ const hudColor: Record<SceneId, string> = {
 
 /**
  * The whole trailer as one paused GSAP timeline, every cut placed on the
- * soundtrack's beat grid (85 BPM, beat n at n × B). The player sets it to the
- * audio clock each frame; the 3D world reads the same clock.
+ * pacing grid (event n at n × B). The player sets it to the clock of the
+ * sound-effects track each frame; the 3D world reads the same clock.
  */
 export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts) {
   const q = (s: string) => root.querySelector(s) as HTMLElement;
@@ -33,7 +32,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   const hide = (t: number, target: gsap.TweenTarget, d = 0.22, to: gsap.TweenVars = {}, from: gsap.TweenVars = {}) =>
     tl.fromTo(target, { autoAlpha: 1, ...from }, { autoAlpha: 0, duration: d, ease: 'power2.in', ...to }, t);
   const screen = q('.tv-screen');
-  const punch = (t: number, s = 1.05) => tl.fromTo(screen, { scale: 1 + (s - 1) * k * 0.6 }, { scale: 1, duration: 0.38, ease: 'power3.out' }, t);
   const shake = (t: number, amp = 14) => tl.fromTo(screen, { x: amp * k, y: -amp * 0.6 * k, rotation: amp * 0.04 * k }, { x: 0, y: 0, rotation: 0, duration: 0.42, ease: 'elastic.out(1.1, 0.3)' }, t);
   const flash = (t: number, o = 0.5) => tl.fromTo('.x-flash', { opacity: o * (gentle ? 0.35 : 1) }, { opacity: 0, duration: 0.36, ease: 'power2.out' }, t);
   const sceneOn = (id: SceneId, t: number, d = 0.01) => tl.fromTo([`.bg-${id}`, `.fg-${id}`], { autoAlpha: 0 }, { autoAlpha: 1, duration: d, ease: 'none' }, t);
@@ -82,7 +80,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   repos.forEach((el, i) => {
     const a = -Math.PI / 2 + (i / repos.length) * Math.PI * 2;
     const x = Math.cos(a) * rx, y = Math.sin(a) * ry;
-    tl.fromTo(el, { autoAlpha: 0, x: x * 1.5, y: y * 1.5, scale: 0.6 }, { autoAlpha: 1, x, y, scale: 1, duration: 0.45, ease: 'expo.out' }, b(13) + 0.04 + i * 0.022);
+    tl.fromTo(el, { autoAlpha: 0, x: x * 1.5, y: y * 1.5, xPercent: -50, yPercent: -50, scale: 0.6 }, { autoAlpha: 1, x, y, xPercent: -50, yPercent: -50, scale: 1, duration: 0.45, ease: 'expo.out', immediateRender: true }, b(13) + 0.04 + i * 0.022);
     // Beat 2 (9.88): they are pulled into the pill.
     tl.fromTo(el, { x, y, scale: 1, autoAlpha: 1 }, { x: 0, y: 0, scale: 0.15, autoAlpha: 0, duration: 0.34, ease: 'power3.in' }, b(14) - 0.08 + i * 0.026);
   });
@@ -97,7 +95,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo('.op-core', { autoAlpha: 0, scale: 0.3 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, b(16) + 0.16);
   tl.fromTo('.op-core', { scale: 1, rotation: 0 }, { scale: 16, rotation: 10, duration: DROP - b(16) - 0.4, ease: 'expo.in' }, b(16) + 0.4);
   tl.fromTo('.x-flash', { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power2.in' }, DROP - 0.2);
-  [b(13), b(14), b(15), b(16)].forEach(t => punch(t, 1.035));
   sceneOff('open', DROP);
 
   // ── 01 DENSE OBJECT COUNTER (12.0 – 14.82) ─────────────────
@@ -108,10 +105,10 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo(cnTitle, { autoAlpha: 0, yPercent: 70, scale: 1.45, fontVariationSettings: wdth(62) },
     { autoAlpha: 1, yPercent: 0, scale: 1, fontVariationSettings: wdth(125), duration: 0.62, stagger: 0.07, ease: 'expo.out', immediateRender: true }, DROP + 0.02);
   kick('counter', DROP + 0.2);
-  [b(18), b(19), b(20)].forEach(t => punch(t, 1.03));
   qa('.cn-steps li').forEach((el, i) => show([b(17.6), b(18), b(19), b(19.5)][i], el, 0.32, { x: -24 }, { x: 0, ease: 'expo.out' }));
-  show(b(19) - 0.04, '.cn-count', 0.35, { scale: 1.3, transformOrigin: '100% 0%' }, { scale: 1, ease: 'expo.out' });
-  show(b(20) + 0.3, '.cn-cam', 0.3, { y: 10 }, { y: 0 });
+  show(SCAN[0], '.cn-count', 0.35, { scale: 1.3, transformOrigin: '100% 0%' }, { scale: 1, ease: 'expo.out' });
+  show(b(18.2), '.cn-cam', 0.3, { y: 10 }, { y: 0 });
+  flash(SHUTTER, 0.5);
   show(b(20) + 0.42, '.cn-json', 0.35, { y: 20 }, { y: 0 });
   hide(b(20.6), ['.cn-head', '.cn-steps', '.cn-count', '.cn-cam', '.cn-json'], 0.24, { scale: 1.08, filter: 'blur(8px)' }, { scale: 1, filter: 'blur(0px)' });
   const dive = subject('counter');
@@ -137,7 +134,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   show(b(23), '.in-result', 0.01);
   tl.fromTo('.in-stack > *', { autoAlpha: 0, yPercent: 60, scale: 0.8 }, { autoAlpha: 1, yPercent: 0, scale: 1, stagger: 0.045, duration: 0.42, ease: 'back.out(2)' }, b(23));
   show(b(23) + 0.3, '.in-facts', 0.3);
-  punch(b(22), 1.035); punch(b(23), 1.05); flash(b(23), 0.18);
+  flash(b(23), 0.18);
   hide(b(24) - 0.3, '.fg-innerself > *', 0.24, { filter: 'blur(10px)', scale: 0.96 }, { filter: 'blur(0px)', scale: 1 });
   sceneOff('innerself', b(24));
 
@@ -150,7 +147,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   show(b(24) + 0.22, '.vo-rec', 0.3, { x: 20 }, { x: 0 });
   tl.fromTo('.vo-specs span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.05, duration: 0.3 }, b(24.5));
   tl.fromTo('.vo-pipe li', { autoAlpha: 0, x: 18 }, { autoAlpha: 1, x: 0, stagger: 0.05, duration: 0.3 }, b(25) - 0.05);
-  punch(b(25), 1.04);
   // Bars rise and become green stripes: wipe to Smart Trash.
   show(b(26) - 0.24, '.x-bars', 0.01);
   tl.fromTo('.x-bars i', { scaleY: 0, transformOrigin: '50% 100%' }, { scaleY: 1, transformOrigin: '50% 100%', duration: 0.22, ease: 'power3.in', stagger: { each: 0.01, from: 'center' } }, b(26) - 0.24);
@@ -169,7 +165,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   show(b(27), '.t4-l', 0.3, { x: -50, scale: 1.3 }, { x: 0, scale: 1, ease: 'expo.out' });
   hide(b(28) - 0.06, '.t4-l', 0.12);
   show(b(28), '.t4-r', 0.3, { x: 50, scale: 1.3 }, { x: 0, scale: 1, ease: 'expo.out' });
-  punch(b(27), 1.05); shake(b(28), 12); punch(b(28), 1.06);
   // Bass cut (19.9): CRT switch-off to a single dot.
   tl.fromTo(screen, { scaleY: 1 }, { scaleY: 0.006, duration: 0.12, ease: 'power3.in' }, BREAKS[0]);
   tl.fromTo(screen, { scaleX: 1 }, { scaleX: 0, duration: 0.14, ease: 'power3.in' }, BREAKS[0] + 0.13);
@@ -190,7 +185,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   show(b(30.5) + 0.06, '.fc-live', 0.25, { x: -14 }, { x: 0 });
   show(b(31), '.fc-ok', 0.32, { scale: 0.85, x: -20 }, { scale: 1, x: 0, ease: 'back.out(2)' });
   tl.fromTo('.fc-frame i', { borderColor: '#5ff3ff' }, { borderColor: '#8cffbe', duration: 0.15 }, b(31));
-  punch(b(30), 1.035); punch(b(31), 1.05); flash(b(31), 0.16);
+  flash(b(31), 0.16);
   // b32: points fly into a hand; the hot gradient bursts out from the face.
   hide(b(32) - 0.05, '.fg-face > *', 0.18);
   const face = subject('face');
@@ -207,7 +202,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   gestures.forEach((t, i) => {
     show(t, chips[i], 0.22, { scale: 0.55, rotation: -8 }, { scale: 1, rotation: 0, ease: 'back.out(2.6)' });
     if (i < 3) hide(gestures[i + 1] - 0.04, chips[i], 0.08, { scale: 0.8 });
-    punch(t, i % 2 ? 1.03 : 1.045);
   });
   show(b(33) + 0.1, '.hd-facts', 0.3, { y: 10 }, { y: 0 });
   hide(b(35) - 0.2, '.fg-hand > *', 0.12, { x: vw * 0.06 });
@@ -226,7 +220,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   ['.st-s1', '.st-s2', '.st-s3'].forEach((s, i) => tl.fromTo(s, { color: 'rgba(255,255,255,0.22)' }, { color: i === 2 ? '#7dff6b' : '#ffd60a', duration: 0.1 }, b(35.5) + i * (B * 0.25)));
   tl.fromTo('.st-tech span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.07, duration: 0.25 }, b(35.6));
   tl.fromTo('.st-stamp', { autoAlpha: 0, scale: 2.8 }, { autoAlpha: 1, scale: 1, duration: 0.16, ease: 'power4.in' }, b(36) - 0.14);
-  shake(b(36), 16); punch(b(36), 1.05);
+  shake(b(36), 16);
   // Bass cut (25.5): pixel staircase into paper.
   show(BREAKS[1], '.x-pix', 0.01);
   const pix = qa('.x-pix i');
@@ -243,7 +237,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo('.pr-slip', { clipPath: 'inset(0% 0% 100% 0%)', y: -24 }, { clipPath: 'inset(0% 0% 0% 0%)', y: 0, duration: 0.65, ease: 'power2.out' }, b(37) + 0.3);
   tl.fromTo('.pr-card', { autoAlpha: 0, y: 24, scale: 0.8 }, { autoAlpha: 1, y: 0, scale: 1, stagger: 0.06, duration: 0.3, ease: 'back.out(2)' }, b(38) - 0.06);
   show(b(38) + 0.25, '.pr-tags', 0.3);
-  punch(b(38), 1.035);
   tl.fromTo('.pr-total', { y: 0, scale: 1 }, { y: -vh * 0.45, scale: 0.5, autoAlpha: 0, duration: 0.3, ease: 'power3.in' }, b(39) - 0.3);
   tl.fromTo('.x-sheet', { autoAlpha: 1, yPercent: 102 }, { yPercent: 0, duration: 0.3, ease: 'power3.in' }, b(39) - 0.3);
   sceneOff('payroll', b(39));
@@ -268,7 +261,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo('.lp-node.out', { opacity: 1 }, { opacity: 0.25, duration: 0.2 }, b(40));
   tl.fromTo('.lp-edge.in', { stroke: '#dbe9ff' }, { stroke: '#ffd60a', duration: 0.15 }, b(40));
   tl.fromTo('.lp-filters span', { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, stagger: 0.05, duration: 0.25 }, b(40) + 0.12);
-  punch(b(40), 1.04);
   show(b(41) - 0.34, '.x-mosaic', 0.01);
   const mosaic = qa('.x-mosaic i');
   const order = mosaic.map((_, i) => hash(i + 3));
@@ -290,7 +282,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   const lvColors = ['#7dff6b', '#2bf6ff', '#ff2bd6'];
   qa('.mt-levels span').forEach((el, i) => tl.fromTo(el, { borderColor: '#3a3a46', color: '#6a6a7a' }, { borderColor: lvColors[i], color: lvColors[i], duration: 0.08 }, b(42) + i * B * 0.33));
   tl.fromTo('.mt-ops span', { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, stagger: 0.06, duration: 0.12, ease: 'steps(2)', immediateRender: true }, b(42.2));
-  punch(b(41.6), 1.05); punch(b(42), 1.04);
   flash(b(43) - 0.04, 0.7);
   sceneOff('math', b(43));
 
@@ -299,7 +290,6 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   show(b(43) + 0.05, '.rc-title', 0.35, { y: 20 }, { y: 0, ease: 'expo.out' });
   tl.fromTo('.rc-tile', { autoAlpha: 0, rotationY: -95, z: -240 }, { autoAlpha: 1, rotationY: 0, z: 0, stagger: 0.045, duration: 0.42, ease: 'expo.out' }, b(43) + 0.04);
   tl.fromTo('.rc-grid', { scale: 1.3, rotationX: 28, rotationZ: -6 }, { scale: 1, rotationX: 14, rotationZ: -2, duration: B * 1.6, ease: 'power2.out', immediateRender: true }, b(43));
-  punch(b(44), 1.04);
   const mid = { x: vw / 2, y: vh / 2 };
   qa('.rc-tile').forEach((el, i) => {
     const c = center(el);
@@ -317,30 +307,11 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   tl.fromTo('.ou-name .oc', { autoAlpha: 0, y: 30, filter: 'blur(10px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', stagger: 0.028, duration: 0.55, ease: 'expo.out' }, b(45) + 0.06);
   show(b(45.7), '.ou-role', 0.45, { y: 14 }, { y: 0, ease: 'expo.out' });
   show(b(46) + 0.06, '.ou-link', 0.4, { y: 12 }, { y: 0, ease: 'expo.out' });
-  punch(b(46), 1.03);
   tl.fromTo('.ou-spark', { rotation: 0, scale: 1 }, { rotation: 90, scale: 1.25, duration: 0.5, ease: 'expo.out' }, b(47));
   flash(b(47), 0.2);
-  tl.fromTo('.tv', { autoAlpha: 1 }, { autoAlpha: 0, duration: DURATION - 33.75, ease: 'power1.in' }, 33.75);
+  tl.fromTo('.tv', { autoAlpha: 1 }, { autoAlpha: 0, duration: DURATION - b(47.85), ease: 'power1.in' }, b(47.85));
 
-  // ── Beat accents: logos, rings and pictures instead of bouncing type ──
-  const exitAt: Partial<Record<SceneId, [number, number]>> = {
-    counter: [b(20.6), 0.2], innerself: [b(24) - 0.3, 0.2], voice: [b(26) - 0.02, 0.01], trash: [BREAKS[0] + 0.27, 0.01], face: [b(32) - 0.05, 0.16],
-    hand: [b(35) - 0.2, 0.12], stock: [b(37) - 0.05, 0.01], payroll: [b(39), 0.01], laptop: [b(41), 0.01], math: [b(43) - 0.04, 0.01],
-  };
-  (Object.keys(stickers) as SceneId[]).forEach(id => {
-    const els = qa(`.bt-${id} .stk`);
-    const [out, d] = exitAt[id] ?? [scenes.find(x => x.id === id)!.to - 0.16, 0.14];
-    stickers[id]!.forEach((st, i) => {
-      const r = portrait ? st.p[2] : st.l[2];
-      const pixel = id === 'math';
-      tl.fromTo(els[i], { autoAlpha: 0, scale: 2.4, rotation: r - 28, y: -24 },
-        { autoAlpha: 1, scale: 1, rotation: r, y: 0, duration: pixel ? 0.2 : 0.34, ease: pixel ? 'steps(4)' : 'back.out(2.4)', immediateRender: true }, b(st.at) - 0.05);
-      tl.fromTo(els[i], { autoAlpha: 1, scale: 1 }, { autoAlpha: 0, scale: 0.3, duration: d, ease: 'power2.in' }, out + i * (d > 0.05 ? 0.02 : 0));
-    });
-  });
-  (Object.keys(rings) as SceneId[]).forEach(id => rings[id]!.beats.forEach(bt =>
-    tl.fromTo(`.ring-${id}`, { autoAlpha: 0.95, scale: 0.12 }, { autoAlpha: 0, scale: 1.75, duration: 0.62, ease: 'expo.out' }, b(bt))));
-
+  // ── Small story moments (pictures that move, not bouncing type) ──
   // Smart Trash: a leaf falls into the sorter on b27 and is flicked left; a bottle on b28, flicked right.
   [['.drop-leaf', 27, -1], ['.drop-bottle', 28, 1]].forEach(([sel, beat, dir]) => {
     const t = b(beat as number), dx = (dir as number) * (portrait ? vw * 0.62 : vw * 0.42);
@@ -396,6 +367,23 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
     tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.3 }, t + 0.35);
   }));
 
+  // ── Cinematic layer: fade from black, letterbox, slow push-ins, light leaks, lens flares ──
+  tl.fromTo('.x-black', { autoAlpha: 1 }, { autoAlpha: 0, duration: 1.1, ease: 'power2.inOut' }, 0.05);
+  tl.fromTo('.cine i', { scaleY: 0 }, { scaleY: 1, duration: 1.6, ease: 'expo.inOut', immediateRender: true }, 0.25);
+  scenes.forEach(sc => tl.fromTo([`.bg-${sc.id}`, `.fg-${sc.id}`], { scale: 1 }, { scale: sc.id === 'open' ? 1.03 : 1.05, duration: sc.to - sc.from, ease: 'none' }, sc.from));
+  const leak = (sel: string, t: number, dir = 1) => {
+    tl.fromTo(sel, { x: dir > 0 ? -vw * 0.7 : vw * 1.0 }, { x: dir > 0 ? vw * 1.0 : -vw * 0.7, duration: 1.1, ease: 'sine.inOut' }, t);
+    tl.fromTo(sel, { autoAlpha: 0 }, { keyframes: [{ autoAlpha: 0.85, duration: 0.4, ease: 'sine.out' }, { autoAlpha: 0, duration: 0.7, ease: 'sine.in' }] }, t);
+  };
+  leak('.leak-a', DROP - 0.25); leak('.leak-b', b(21) - 0.3, -1); leak('.leak-a', b(29) - 0.1, -1);
+  leak('.leak-b', b(37) - 0.25); leak('.leak-a', b(45) - 0.2); leak('.leak-b', b(45.4), -1);
+  const flare = (t: number, y = 0.5, s = 1) => {
+    tl.fromTo('.flare', { autoAlpha: 1, top: `${y * 100}%`, scaleX: 0.15, scaleY: 1.4 * s }, { scaleX: 1.25, scaleY: 0.6, duration: 0.55, ease: 'expo.out' }, t);
+    tl.fromTo('.flare', { autoAlpha: 1 }, { autoAlpha: 0, duration: 0.4, ease: 'power2.in' }, t + 0.2);
+  };
+  flare(DROP); flare(SHUTTER, portrait ? 0.36 : 0.22, 0.8); flare(b(31), 0.5, 0.7); flare(b(36), portrait ? 0.7 : 0.74, 0.9); flare(b(45) + 0.05, 0.47, 1.2);
+  tl.fromTo('.ou-rule', { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: 'expo.out', transformOrigin: (i: number) => (i ? '0% 50%' : '100% 50%'), immediateRender: true }, b(45.5));
+
   // ── Per-frame text: HUD, counters, waveform, typing, scramble ──
   const hud = q('.hud'), tc = q('.hud-tc'), idx = q('.hud-idx'), repo = q('.hud-repo'), sc = q('.hud-sc'), bar = q('.hud-bar i');
   const typed = qa('.op-typed .tc');
@@ -407,8 +395,11 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
   const last = { scene: '', typed: -1, hud: '', light: null as boolean | null };
   const vignette = q('.tv-vignette');
   const rupiah = (n: number) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const tvEl = q('.tv');
   tl.eventCallback('onUpdate', () => {
     const t = tl.time();
+    // Handheld camera: a slow, tiny drift of the whole frame.
+    if (!gentle) tvEl.style.transform = `translate(${(Math.sin(t * 0.9) * 2.2 + Math.sin(t * 2.3) * 0.7).toFixed(2)}px, ${(Math.cos(t * 0.7) * 1.8 + Math.sin(t * 1.9) * 0.6).toFixed(2)}px) rotate(${(Math.sin(t * 0.5) * 0.12).toFixed(3)}deg) scale(1.012)`;
     const s = Math.floor(t), f = Math.floor((t - s) * 24);
     tc.textContent = `00:00:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`;
     bar.style.transform = `scaleX(${(t / DURATION).toFixed(4)})`;
@@ -420,7 +411,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
     if (cur.id !== last.scene) {
       last.scene = cur.id;
       const p = projects.find(x => x.id === cur.id);
-      idx.textContent = p ? `${p.n} / 10` : cur.id === 'open' ? '00 / 10' : '10 / 10';
+      idx.textContent = p ? `PROYEK ${p.n}` : cur.id === 'open' ? 'PEMBUKA' : 'PENUTUP';
       repo.textContent = p ? p.repo : 'github.com/Hwarinn66';
       sc.textContent = cur.label.toUpperCase();
     }
@@ -428,7 +419,7 @@ export function buildTrailerTimeline(root: HTMLElement, { mobile, gentle }: Opts
     const n = Math.floor(prog(t, b(10), B * 1.15) * typed.length);
     if (n !== last.typed) { typed.forEach((el, i) => { el.style.opacity = i < n ? '1' : '0'; }); last.typed = n; }
     // Counters
-    if (t > DROP && t < b(21)) cnN.textContent = String(Math.round(outCubic(prog(t, b(19), 0.62)) * 50));
+    if (t > DROP && t < b(21)) cnN.textContent = String(scannedCount(t));
     if (t > b(26) && t < b(29)) { t4c1.textContent = t > b(27) + 0.15 ? '1' : '0'; t4c2.textContent = t > b(28) + 0.15 ? '1' : '0'; }
     if (t > b(37) && t < b(39)) prAmt.textContent = rupiah(outCubic(prog(t, b(38) + 0.25, 0.6)) * 5487500);
     if (t > b(41) && t < b(43)) {

@@ -1,15 +1,16 @@
 /**
- * Beat grid measured from the soundtrack (librosa beat tracking, 85.02 BPM).
- * Beat n sits at n × B seconds: the song was cut to start on a beat.
- * - b13–b16 (9.17 – 11.29): the four build beats that open into the projects
- * - b17 (12.00): the drop
- * - the bass cuts out just before b29, b37 and b45 (≈19.9, 25.5 and 31.15 s)
+ * Pacing unit. The trailer used to be cut to a song at 85 BPM; it now runs on
+ * sound effects alone, stretched to 40 s, so every cue keeps its place on the
+ * same grid: event n sits at n × B seconds.
+ * - b13–b16: the four steps of the opening that lead into the projects
+ * - b17: the first project lands
+ * - b28.2, b36.1 and b44.1: the three "breaks" (CRT off, pixel staircase, collapse into the sparkle)
  */
-export const B = 60 / 85.0185;
+export const B = (40 / 34.64) * (60 / 85.0185);
 export const b = (n: number) => n * B;
 export const DROP = b(17);
-export const DURATION = 34.64;
-export const BREAKS = [19.9, 25.48, 31.13];
+export const DURATION = 40;
+export const BREAKS = [b(28.2), b(36.1), b(44.11)];
 
 export type SceneId = 'open' | 'counter' | 'innerself' | 'voice' | 'trash' | 'face' | 'hand' | 'stock' | 'payroll' | 'laptop' | 'math' | 'recap' | 'outro';
 
@@ -31,7 +32,7 @@ export const scenes: { id: SceneId; from: number; to: number; label: string }[] 
 
 /** Where each 3D subject sits: [x shift on landscape, y shift on portrait], as a fraction of the screen. */
 export const shift3d = {
-  counter: [0.15, 0.1], innerself: [0.17, 0.06], trash: [0.11, 0.1], face: [0.17, 0.08],
+  counter: [0.15, 0.17], innerself: [0.17, 0.06], trash: [0.11, 0.1], face: [0.17, 0.08],
 } as const;
 
 export const chapters = [
@@ -173,5 +174,15 @@ export const bst: BstNode[] = (() => {
   }
   return nodes;
 })();
+/** Dense Object Counter: the webcam takes its snapshot, then a scan line sweeps the tray (tray units, −0.92 → 0.92). */
+export const SHUTTER = b(18.6);
+export const SCAN = [b(18.8), b(19.75)] as const;
+export function scanX(t: number) {
+  const k = Math.min(1, Math.max(0, (t - SCAN[0]) / (SCAN[1] - SCAN[0])));
+  return -0.92 + 1.84 * (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+}
+/** Objects the scan line has passed, in tray units. */
+export const scannedCount = (t: number) => (t < SCAN[0] ? 0 : objects.filter(o => (o.x - 500) / 500 <= scanX(t)).length);
+
 /** Search range for the BST shot: 8 – 15 juta. Nodes outside are pruned. */
 export const bstRange = [8, 15] as const;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { b } from '../trailer-data';
-import { canvasTexture, fitFactor, hump, inExpo, keys, outBack, outElastic, outExpo, prog, type Rig } from './util';
+import { canvasTexture, fitFactor, inExpo, keys, outElastic, outExpo, prog, type Rig } from './util';
 
 /**
  * InnerSelf Cognitive: a pearlescent "mind" orb with the eight cognitive
@@ -98,13 +98,10 @@ export function makeOrbRig(opts: { mobile: boolean }): Rig {
       uniforms.uGlow.value = prog(t, b(23), 0.3);
       const pop = outElastic(prog(t, T, 0.75));
       const squash = inExpo(prog(t, END - 0.26, 0.26));
-      const beat = hump(t, [b(22), b(23)], 0.32) * 0.08 + hump(t, [b(21.5), b(22.5), b(23.5)], 0.25) * 0.04;
-      orb.scale.set(pop * (1 + squash * 1.6 + beat), pop * (1 - squash * 0.97 + beat), pop * (1 + squash * 0.3 + beat));
+      orb.scale.set(pop * (1 + squash * 1.6), pop * (1 - squash * 0.97), pop * (1 + squash * 0.3));
       orb.rotation.y = t * 0.6;
       shadow.scale.setScalar(pop); (shadow.material as THREE.MeshBasicMaterial).opacity = pop * (1 - squash);
-      // Rings snap a quarter turn on every beat; the orb breathes with it.
-      const snaps = [b(21.5), b(22), b(22.5), b(23), b(23.5)].reduce((acc, at) => acc + outBack(prog(t, at, 0.32), 2) * (Math.PI / 4), 0);
-      const spin = t * 0.35 + snaps;
+      const spin = t * 0.55;
       ringGroups.forEach((g, i) => {
         g.scale.setScalar(outExpo(prog(t, T + 0.12 + i * 0.08, 0.6)) * (1 + squash * 0.6));
         g.rotation.z = ringDefs[i].tilt.z + Math.sin(t * 0.4 + i) * 0.08;

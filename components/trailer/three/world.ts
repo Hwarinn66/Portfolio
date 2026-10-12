@@ -32,7 +32,7 @@ export function createWorld(canvas: HTMLCanvasElement, opts: { mobile: boolean; 
   const view = makeView();
 
   const rigs: Rig[] = [
-    makeNumeralRig({ mobile: opts.mobile, text: '10' }, view),
+    makeNumeralRig({ mobile: opts.mobile }, view),
     { ...makeCounterRig(opts), shift: shift3d.counter },
     { ...makeOrbRig(opts), shift: shift3d.innerself },
     { ...makeEsp32Rig(opts), shift: shift3d.trash },

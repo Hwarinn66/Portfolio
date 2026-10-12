@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { b } from '../trailer-data';
-import { canvasTexture, fitFactor, hump, keys, outBack, outExpo, prog, type Rig } from './util';
+import { canvasTexture, fitFactor, keys, outBack, outExpo, prog, type Rig } from './util';
 
 /**
  * Smart Trash: an ESP32 dev board and a micro servo, modelled in millimetres.
@@ -167,13 +167,10 @@ export function makeEsp32Rig(opts: { mobile: boolean }): Rig {
       const k = outExpo(prog(t, T, 0.85));
       group.rotation.y = -2.4 * (1 - k) + 0.25 + Math.sin(t * 0.5) * 0.05;
       group.rotation.x = 0.25 * (1 - k);
-      // The board hops on every beat and half beat.
-      const hopBeats = [b(26.5), b(27), b(27.5), b(28)];
-      group.position.y = -1.2 * (1 - k) + Math.sin(t * 1.6) * 0.04 + hump(t, hopBeats, 0.26) * 0.12;
-      group.rotation.z = hump(t, [b(26.5), b(27.5)], 0.26) * 0.05 - hump(t, [b(27), b(28)], 0.26) * 0.05;
+      group.position.y = -1.2 * (1 - k) + Math.sin(t * 1.6) * 0.04;
       group.scale.setScalar(0.35 + 0.65 * k);
       ledMat.emissiveIntensity = t > T + 0.38 ? 3 : 0;
-      ledBlueMat.emissiveIntensity = [b(26.5), b(26.75), b(27), b(27.5), b(27.75), b(28)].some(at => t > at && t < at + 0.14) ? 4 : 0;
+      ledBlueMat.emissiveIntensity = [b(26.75), b(27.75)].some(at => t > at && t < at + 0.25) ? 4 : 0;
       // Servo: left (organik) on b27, right (non-organik) on b28.
       const left = outBack(prog(t, b(27), 0.32), 2.2), right = outBack(prog(t, b(28), 0.32), 2.2);
       horn.rotation.y = -1.25 * left + 2.5 * right;
