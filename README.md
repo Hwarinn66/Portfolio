@@ -6,7 +6,7 @@ Built with **Next.js 16 (App Router, static export), React 19, Tailwind CSS 4 an
 
 ## Design
 
-Light pastel glassmorphism on a "milk glass" field (`#f2f3fa`), with deep indigo ink and one iris accent.
+Light glassmorphism on an almond "milk glass" field (`#f3ebdf`), using the Almond `#D6BD98`, Matcha Brew `#677D6A`, Forest Roast `#40534C` and Eclipse `#1A3636` palette: Eclipse ink, Forest accent, Matcha and Almond for the aurora, tints and diagrams.
 
 - **Glass**: frosted panels (`backdrop-filter`) over a drifting pastel aurora and a particle canvas, so every panel has colour behind it to refract.
 - **Hero**: a staggered display headline (Bricolage Grotesque) with a glass portrait card. A face-detection frame locks onto the portrait as a nod to the face-recognition project. Tap or click the card to re-run the scan.

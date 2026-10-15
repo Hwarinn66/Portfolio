@@ -8,7 +8,7 @@ type Ripple = { x: number; y: number; age: number };
 type Spark = { x: number; y: number; vx: number; vy: number; life: number; c: number };
 
 // Deeper versions of the pastel palette so points stay visible on a light field.
-const colors = ['108 88 232', '38 160 132', '232 122 92', '72 136 228', '206 150 40'];
+const colors = ['26 54 54', '103 125 106', '158 123 71', '64 83 76', '128 150 120'];
 
 /**
  * Fixed background: drifting pastel aurora plus a canvas "sensor net".
@@ -57,7 +57,7 @@ export default function BackgroundField({ paused }: { paused: boolean }) {
 
     // Solid colours + globalAlpha: no per-frame string building, fewer style changes.
     const solid = colors.map(c => `rgb(${c})`);
-    const ink = 'rgb(84 64 217)';
+    const ink = 'rgb(64 83 76)';
     const TAU = Math.PI * 2;
 
     const draw = (time: number, animate: boolean) => {
