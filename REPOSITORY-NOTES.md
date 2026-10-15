@@ -1,6 +1,6 @@
 # Project content and provenance
 
-Content reviewed on 15 September 2026 (Dense Object Counter and Stock Recording added, replacing Hand Gesture Navigator and Math Game, on 12 October 2026) against Efriza Taufiqurrohman's supplied CV and Portfolio PDF, and the public repositories of [Hwarinn66](https://github.com/Hwarinn66). Repository descriptions on this website are a curated snapshot, not an automatic live GitHub feed. The glassmorphism redesign (11 October 2026) kept this content; it only regrouped it into categories (`ml`, `cv`, `iot`, `web`) and per-project technology lists derived from the evidence below. The technical-editorial redesign (15 October 2026) added case-study fields; see the section below.
+Content reviewed on 15 September 2026 (Dense Object Counter and Stock Recording added, replacing Hand Gesture Navigator and Math Game, on 12 October 2026) against Efriza Taufiqurrohman's supplied CV and Portfolio PDF, and the public repositories of [Hwarinn66](https://github.com/Hwarinn66). Repository descriptions on this website are a curated snapshot, not an automatic live GitHub feed. The glassmorphism redesign (11 October 2026) kept this content; it only regrouped it into categories (`ml`, `cv`, `iot`, `web`) and per-project technology lists derived from the evidence below, used by the filters, the toolkit and the terminal.
 
 | Project | Repository | Evidence reviewed | Scope represented on the website |
 | --- | --- | --- | --- |
@@ -14,39 +14,21 @@ Content reviewed on 15 September 2026 (Dense Object Counter and Stock Recording 
 
 The empty repositories were not featured. The payroll application's source is in `aplikasi`; the similarly named empty repository is not used as evidence. No private datasets, face enrollment images, credentials, or application user records were copied.
 
-The seven project visuals are explanatory diagrams drawn as inline SVG. They are still by default and animate only when a visitor presses "Putar alur" in a case study. They are not screenshots, live application integrations, or claims about project deployment, and the page says so. No accuracy percentages, production user counts, or commercial outcomes are asserted. The Smart Trash confidence threshold is a configuration value, not an evaluation score. InnerSelf is a prototype trained on synthetic data, and blink detection is not represented as production anti-spoofing.
+The seven project visuals are animated explanatory diagrams drawn as inline SVG with CSS animation. They are not screenshots, live application integrations, or claims about project deployment. No accuracy percentages, production user counts, or commercial outcomes are asserted. The Smart Trash confidence threshold is a configuration value, not an evaluation score. InnerSelf is a prototype trained on synthetic data, and blink detection is not represented as production anti-spoofing.
 
 Education, work history, certificate status, portrait, contact links and PDFs come from the user's supplied documents. Flutter is included from the portfolio reference. Next.js, Tailwind CSS and GSAP are identified as the stack of this portfolio website; they are not added as claims about the historical projects. The BNSP certificate remains marked as awaiting issuance.
 
-## Case studies (15 October 2026)
-
-Each project now has `context`, `flow`, `decisions` and `limits` in `lib/projects.ts`. They were written only from these sources, at these commits, plus the content already reviewed above:
-
-| Project | Source |
-| --- | --- |
-| InnerSelf Cognitive | [MBTI-test](https://github.com/Hwarinn66/MBTI-test) `13d2fc6` README: neutral answers stored as their own category, type candidates from the pattern of eight functions, optional local Qwen narration with a fallback to the evidence-based review, no authentication or rate limiting yet |
-| Smart Trash | [Smart-Trash](https://github.com/Hwarinn66/Smart-Trash) `5c67dff` README: motion detection before inference, prediction smoothing, confidence threshold, cooldown/pause, two-phase training with class weighting, `/cmd` HTTP endpoint on the ESP32 |
-| Face Recognition Attendance | [face-recognition](https://github.com/Hwarinn66/face-recognition) `432429a` README: registration flow with teacher approval, blink check by eye aspect ratio, Socket.IO updates, duplicate check per day, retraining needed for new students |
-| Laptop Recommendation | [laptop-recomendation-with-binary-tree](https://github.com/Hwarinn66/laptop-recomendation-with-binary-tree) `2279fdd` `wqdw.py`: tree ordered by price (left when price ≥ minimum, right when price ≤ maximum), every visited node checked against brand, processor, RAM, storage and VGA |
-| Dense Object Counter | [Dense-Object-Counter](https://github.com/Hwarinn66/Dense-Object-Counter) `ca29dab` README: tiled inference for objects too small in the full image, ROI, swappable OpenCV or YOLO detector |
-| Stock Recording | [Stock-Recording-Laravel](https://github.com/Hwarinn66/Stock-Recording-Laravel) `4c2df70` and [Stock-Recording-TypeScript](https://github.com/Hwarinn66/Stock-Recording-TypeScript) `e5b302f` READMEs: pending until approved, one SQL transaction for stock and history, UNIQUE constraint as the last guard, one operator on a local network, trusted HTTPS for the phone camera |
-| HR & Payroll System | No new source reviewed; the case study reuses the reviewed description and highlights, and has no decisions or limitations listed |
-
-- A decision's reason is shown only where the repository states it. Where it does not, the decision is listed without one.
-- The Laptop Recommendation diagram was redrawn: the earlier one showed price, CPU and RAM as tree levels, but the code is one binary search tree ordered by price. Prices in the diagram (9–25 million) are illustrative.
-- Not on the website because it was not supplied: Efriza's role on each project (solo or team, and which parts) and screenshots or photos of the running projects. None of the public repositories above contains UI screenshots. `role` in `lib/projects.ts` shows a "Peran saya" row once it is filled in.
-
 ## Assets
 
-- The previous circuit-board scroll opening and its three generated images were removed in the redesign (11 October 2026). The aurora, particle field, glass orbs and first-visit search opening were removed on 15 October 2026; there are no generated images in the repository.
+- The previous circuit-board scroll opening and its three generated images were removed in the redesign (11 October 2026). The background is now a CSS aurora and a canvas particle field drawn in code; there are no generated images in the repository.
 
-- Portrait and two certificate thumbnails: extracted from the supplied documents and preserved from the original website. No generative edits. The hero now uses the studio portrait (`efriza-about.webp`); `efriza-hero.webp` and `efriza-portrait.webp` are kept but not shown.
+- Portrait and two certificate thumbnails: extracted from the supplied documents and preserved from the original website. No generative edits.
 - CV and Portfolio PDFs: original user-supplied content, published under descriptive download filenames.
-- Technology logos: [Devicon](https://github.com/devicons/devicon), pinned revision `7330accdbc47e2dc0c19789a48533c4a3c50fe58`. Laravel, TypeScript, MySQL, CodeIgniter, Socket.IO, HTML5, NumPy and Bootstrap were added from the same revision for an earlier version of the trailer; the trailer no longer shows logos, and these files are kept with the others. Original SVG colors retained. Exact source URLs and SHA-256 checksums are in `public/assets/logos/sources.json`; the upstream MIT license is in the same directory. Since 15 October 2026 the page lists technologies as text and does not show these logos; the files are kept.
+- Technology logos: [Devicon](https://github.com/devicons/devicon), pinned revision `7330accdbc47e2dc0c19789a48533c4a3c50fe58`. Laravel, TypeScript, MySQL, CodeIgniter, Socket.IO, HTML5, NumPy and Bootstrap were added from the same revision for an earlier version of the trailer; the trailer no longer shows logos, and these files are kept with the others. Original SVG colors retained. Exact source URLs and SHA-256 checksums are in `public/assets/logos/sources.json`; the upstream MIT license is in the same directory.
 - The Arduino logo describes the Arduino IDE ecosystem, not an official ESP32 logo. Logos identify technologies, not endorsements.
 - Interface icons: [Lucide](https://lucide.dev/), ISC license, installed through `lucide-react`.
-- Local fonts: Instrument Sans and JetBrains Mono via Fontsource, SIL Open Font License, included with their installed packages. Fonts are served with the website and do not require a Google Fonts request. Bricolage Grotesque was removed on 15 October 2026.
-- Trailer font: Archivo via Fontsource, SIL Open Font License, loaded with the trailer only.
+- Local fonts: Bricolage Grotesque, Instrument Sans and JetBrains Mono via Fontsource, SIL Open Font License, included with their installed packages. Fonts are served with the website and do not require a Google Fonts request.
+- Trailer font: Archivo via Fontsource, SIL Open Font License.
 
 ## Trailer (12 October 2026)
 
