@@ -9,13 +9,15 @@ type Props = {
   labelledBy: string;
   children: ReactNode;
   size?: 'wide' | 'narrow';
+  /** Short text in the sheet's top bar, next to the close button. */
+  label?: string;
 };
 
 /**
  * Native <dialog> (focus trap, Escape, top layer). On phones it becomes a
  * bottom sheet that can be dragged down to close.
  */
-export default function GlassDialog({ open, onClose, labelledBy, children, size = 'wide' }: Props) {
+export default function SheetDialog({ open, onClose, labelledBy, children, size = 'wide', label }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
   const closing = useRef(false);
@@ -26,7 +28,7 @@ export default function GlassDialog({ open, onClose, labelledBy, children, size 
     closing.current = true;
     el.classList.add('is-closing');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    window.setTimeout(() => { closing.current = false; el.classList.remove('is-closing'); onClose(); }, reduced ? 0 : 230);
+    window.setTimeout(() => { closing.current = false; el.classList.remove('is-closing'); onClose(); }, reduced ? 0 : 160);
   }, [onClose]);
 
   useEffect(() => {
@@ -65,19 +67,22 @@ export default function GlassDialog({ open, onClose, labelledBy, children, size 
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
       panel.style.transition = '';
-      if (dy > 110) { panel.style.translate = ''; requestClose(); }
-      else panel.style.translate = '';
+      panel.style.translate = '';
+      if (dy > 110) requestClose();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
   };
 
-  return <dialog ref={dialog} className={`gdialog gdialog-${size}`} aria-labelledby={labelledBy}
+  return <dialog ref={dialog} className={`sheet-dialog sheet-${size}`} aria-labelledby={labelledBy}
     onClick={event => { if (event.target === event.currentTarget) requestClose(); }}>
     <div ref={sheet} className="sheet">
       <div className="sheet-handle" onPointerDown={startDrag} aria-hidden="true"><span /></div>
-      <button className="sheet-close" onClick={requestClose} aria-label="Tutup"><X size={20} /></button>
+      <div className="sheet-bar">
+        <span className="sheet-label">{label}</span>
+        <button type="button" className="sheet-close" onClick={requestClose} aria-label="Tutup"><X size={20} strokeWidth={1.75} /></button>
+      </div>
       <div className="sheet-body">{children}</div>
     </div>
   </dialog>;
