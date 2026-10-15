@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LayoutGrid, Pause, Play, RotateCcw, Volume2, VolumeX, X } from 'lucide-react';
+import '@fontsource-variable/archivo/standard.css';
 import '@fontsource-variable/fraunces/full-italic.css';
 import '@fontsource/instrument-serif/400.css';
 import '@fontsource/instrument-serif/400-italic.css';
