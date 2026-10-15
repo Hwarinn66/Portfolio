@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', locale: 'id_ID', title: 'Efriza Taufiqurrohman — Software, AI & IoT', description: 'Dari ide menjadi sistem. Jelajahi proyek software, machine learning, dan IoT.' },
 };
 
-export const viewport: Viewport = { themeColor: '#f2f3fa', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+export const viewport: Viewport = { themeColor: '#f3ebdf', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 // Decides before first paint whether the opening plays: once per tab session, never with reduced
 // motion, a paused-motion preference or a deep link. A timeout unlocks the page if the app fails to start.
